@@ -12,13 +12,13 @@ const styleStr = (style, important) => `{${
 
 const CALLS = Symbol('VENDETTA_CALLS');
 export const unwrap = v =>
-  v?.[CALLS] ? v[CALLS]
-  : typeof v == 'function' ? unwrap(v())
+  v && v[CALLS] || (
+  typeof v == 'function' ? unwrap(v())
   : Array.isArray(v) ?
     Object.hasOwn(v[0], 'raw')
     ? v[0].flatMap((a,i) => [a, unwrap(v[i+1] ?? '')]).filter(v=>v)
     : v.flatMap(unwrap)
-  : [v];
+  : [v]);
 
 const init = calls => calls.length
   ? calls
