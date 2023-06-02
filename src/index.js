@@ -43,11 +43,11 @@ const reduce = calls => Object.values(calls.reduce((acc, v) => {
   return acc;
 }, {}));
 
-const Media = ([media, ...args], last) => combine(args, [{ media }]);
+const Media = ([media, ...args]) => combine(args, [{ media }]);
 const Style = (args) => combine(args, [{ inline: true }]);
 const Important = (args) => combine(args, [{ important: true }]);
 const Group = (args) => combine(args, [{ group: 'ref' }]);
-Group.chain = (key) => ({ group: 'create' });
+Group.chain = () => ({ group: 'create' });
 
 const Transition = ([param, ...args]) => args.concat({
   transition: Object.fromEntries(args
@@ -86,7 +86,7 @@ const Property = (args, last, ctx) => {
 }
 Property.chain = (key, last) => ({ props: [...(last.props ?? []), {key}] });
 
-const Selector = (args, last) => args.map(arg => ({
+const Selector = (args) => args.map(arg => ({
   ...arg,
   sel: (arg.sel ? '(' + arg.sel + ')' : '')
 }));
@@ -160,7 +160,7 @@ const process = (api, call, el, atomic, prefix) => {
 export const Adapter = (api) => (cfg) => {
   const {
     adopt=true, atomic=false,
-    prefix='🇻', unit=[8,'px'], resolve={}, methods=v=>({})
+    prefix='🇻', unit=[8,'px'], resolve={}, methods=()=>({})
   } = cfg;
   for (const [k, r] of Object.entries(resolve))
     resolve[k] = typeof r == 'function' ? r : v => r[v] ?? v;
