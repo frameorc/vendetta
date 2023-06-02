@@ -29,7 +29,7 @@ const combine = (calls1, calls2) => reduce(
     init(calls2).map(c2 => ({
       important: c2.important,
       inline: c2.inline,
-      group: [c2.group, c1.group].filter(v => v !== undefined)[0],
+      group: c2.group ?? c1.group,
       sel: (c1.sel ?? '') + (c2.sel ?? ''),
       media: [c1.media, c2.media].filter(v => v).join(' and '),
       animations: { ...(c1.animations ?? {}), ...(c2.animations ?? {}) },
@@ -121,8 +121,9 @@ const stack = (ctx, calls) => new Proxy(ctx.target, {
 const process = (api, call, el, atomic, prefix) => {
   const {
     sel='', group, important, media='',
-    inline, style={}, animations={}, transition={}
+    inline, animations={}, transition={}
   } = call;
+  const style = {...call.style};
   const G = prefix + 'G';
   if (group == 'create') return api.addClass(el, G);
   
