@@ -1,3 +1,7 @@
+// vendetta core
+// MIT License
+// (c) 2023 Fedot Kryutchenko
+
 const ID = ((v={}, i=0) => (...s) => v[s] ??= i++)();
 const kebab = s => s.replaceAll(/[A-Z]/g, c => '-' + c.toLowerCase());
 const selStr = key =>
@@ -16,7 +20,7 @@ export const unwrap = v =>
   typeof v == 'function' ? unwrap(v())
   : Array.isArray(v) ?
     Object.hasOwn(v[0], 'raw')
-    ? v[0].flatMap((a,i) => [a, unwrap(v[i+1] ?? '')]).filter(v=>v)
+    ? v[0].flatMap((a, i) => !v[i+1] ? a : [a, unwrap(v[i+1])])
     : v.flatMap(unwrap)
   : [v]);
 
@@ -68,7 +72,7 @@ const Animation = ([param, ...keyframes], last) => {
       unwrap([args]).reduce((r, v) => Object.assign(r, v.style), {})
     ])
   }));
-  return [{animations: {...last.animations, [Math.random()]: anim}}];
+  return [{animations: {[Math.random()]: anim}}];
 }
 
 const Property = (args, last, ctx) => {
@@ -157,11 +161,10 @@ const process = (api, call, el, atomic, prefix) => {
   }
 }
 
-export const Adapter = (api) => (cfg) => {
-  const {
-    adopt=true, atomic=false,
-    prefix='🇻', unit=[8,'px'], resolve={}, methods=()=>({})
-  } = cfg;
+export const Adapter = (api) => ({
+  adopt=true, atomic=false, prefix='🇻',
+  unit=[8,'px'], resolve={}, methods
+}) => {
   for (const [k, r] of Object.entries(resolve))
     resolve[k] = typeof r == 'function' ? r : v => r[v] ?? v;
   resolve.size = v => isNaN(+v) ? v : +v * unit[0] + unit[1];
@@ -174,11 +177,12 @@ export const Adapter = (api) => (cfg) => {
   
   const v = stack({
     target: api.target,
-    methods: methods(resolve),
+    methods: methods?.(resolve) ?? {},
     process: (args, calls) => {
       const el = api.element(args);
-      return el && calls.map(call =>
-        process(api, call, el, atomic, prefix));
+      if (!el) return false;
+      for (const call of calls) process(api, call, el, atomic, prefix);
+      return true;
     }
   }, []);
   return [v, stylesheet];
