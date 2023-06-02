@@ -2,7 +2,6 @@
 // MIT License
 // (c) 2023 Fedot Kryutchenko
 
-const ID = ((v={}, i=0) => (...s) => v[s] ??= i++)();
 const kebab = s => s.replaceAll(/[A-Z]/g, c => '-' + c.toLowerCase());
 const selStr = key =>
   key[0] == '$'
@@ -120,13 +119,13 @@ const stack = (ctx, calls) => new Proxy(ctx.target, {
   apply: (_, __, args) => ctx.process(args, calls) || call(calls, args, ctx)
 });
 
-const process = (api, call, el, atomic, prefix) => {
+const process = (api, call, el, atomic, escape) => {
   const {
     sel='', group, important, media='',
     inline, animations={}, transition={}
   } = call;
   const style = {...call.style};
-  const G = prefix + 'G';
+  const G = escape('G');
   if (group == 'create') return api.addClass(el, G);
   
   style.transition = Object.entries(transition).map(([k, v]) =>
@@ -136,7 +135,7 @@ const process = (api, call, el, atomic, prefix) => {
     const str = v.keyframes.map(([ident, style]) =>
       ident + '% ' + styleStr(style, false)
     ).join('\n');
-    const id = prefix + ID(str);
+    const id = escape(str);
     api.addCSS(`@keyframes ${id} {\n${str}\n}`);
     return v.param + ' ' + id;
   }).join(',');
@@ -150,7 +149,7 @@ const process = (api, call, el, atomic, prefix) => {
     : [style];
   for (const style of entries) {
     let str = styleStr(style, important);
-    const cls = prefix + ID(media, group, sel, str);
+    const cls = escape(media + group + sel + str);
     str = (
       group == 'ref'
       ? `.${G}${sel} :not(.${G}) .${cls}, .${G}${sel} > .${cls}`
@@ -161,8 +160,9 @@ const process = (api, call, el, atomic, prefix) => {
   }
 }
 
+const ID = ((v={}, i=0) => (s) => v[s] ??= i++)();
 export const Adapter = (api) => ({
-  adopt=true, atomic=false, prefix='🇻',
+  adopt=true, atomic=false, escape=i=>'🇻'+ID(i),
   unit=[8,'px'], resolve={}, methods
 }) => {
   for (const [k, r] of Object.entries(resolve))
@@ -181,7 +181,7 @@ export const Adapter = (api) => ({
     process: (args, calls) => {
       const el = api.element(args);
       if (!el) return false;
-      for (const call of calls) process(api, call, el, atomic, prefix);
+      for (const call of calls) process(api, call, el, atomic, escape);
       return true;
     }
   }, []);

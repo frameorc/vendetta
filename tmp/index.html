@@ -4,7 +4,6 @@ import { unwrap } from '../src/index.js';
 import { methods } from '../themes/default.js';
 import V from '../adapters/frameorc.js';
 const [v, stylesheet] = V({
-  atomic: false,
   resolve: {
     color: {
       'white': '#ffffff',
@@ -54,8 +53,7 @@ const B = () => {
     v.Animation('2s infinite alternate ease-in-out', v.rot`10deg`, v.rot`-10deg`)
   );
 }
-
-body(v.Style(v.m`0`.p`4`),
+body(v.Style(v.m`0`, v.Important(v.p`4`)),
   c(v.row`l b`, '123'),
   c(v.abs.ib`4`.il`12`.w.h`mx`.gap`4 2`.grid`4[6 12|24] 4[12|6]`,
     Array.from({length: 16}, (_,i)=>
@@ -66,18 +64,16 @@ body(v.Style(v.m`0`.p`4`),
   c(v.Group,
     v.col.gap`12`.p`4`.abs.w.h`40`.it`4`.il`24`.z`1`.rtr.rbl`8`.rtl.rbr`4`(A),
     c.Span(v.td`~`.w`mn`.tws`nw`.ts`xl`, 'Hover me'),
-    c(v.m.p`2`.rtl.rbr`2`.rtr.rbl`.5`, B,
+    c(v.m.p`2`.rtl.rbr`2`.rtr.rbl`.5`(B),
       'Changes color on group hover')),
   () => c.Pre(v.ts`md`.tc`black`.twb`a`.tws`pw`.abs.ir`16`.w`120`,
     [...stylesheet.rules].map(v => v.cssText).join('\n'))
 );
-setTimeout(body.refresh)
+setTimeout(body.refresh);
 console.log('---')
 const C = () => v.Group(v.Hover.tc`blue`);
 console.log(unwrap(
-  v.Hover(
-    v.tc`red`
-  )
+  v.Style(v.m`0`, v.Important(v.p`4`)),
   //v(() => v.Group(v.Hover.tc`red`, v.bg`blue`))(v.tc`cyan`, v.Animation('1s', v.bg`red`))
 ))
 </script>
