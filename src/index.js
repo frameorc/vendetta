@@ -58,7 +58,7 @@ const Transition = ([param, ...args]) => args.concat({
     .flatMap(arg => Object.keys(arg.style ?? {}))
     .map(k => [k, param]))
 });
-const Animation = ([param, ...keyframes], last) => {
+const Animation = ([param, ...keyframes]) => {
   const kf = keyframes.reduce((l, v) => (
     ('sel' in v ? l[0] : l).push(v)
   , l), [[]]);
