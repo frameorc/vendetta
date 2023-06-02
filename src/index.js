@@ -5,7 +5,7 @@ const selStr = key =>
   ? '::' + kebab(key.slice(1))
   : ':' + kebab(key).slice(1);
 const styleStr = (style, important) => `{${
-  Object.entries(style).filter(([k, v]) => k && v).map(([k, v]) =>
+  Object.entries(style).map(([k, v]) =>
     kebab(k) + ': ' + v + (important ? ' !important' : '') + ';'
   ).join('')
 }}`;
@@ -14,18 +14,17 @@ const CALLS = Symbol('VENDETTA_CALLS');
 export const unwrap = v =>
   v?.[CALLS] ? v[CALLS]
   : typeof v == 'function' ? unwrap(v())
-  : Array.isArray(v) ? (
+  : Array.isArray(v) ?
     Object.hasOwn(v[0], 'raw')
-    ? v[0].map((a,i) => [a, unwrap(v[i+1] ?? '')]).filter(v=>v)
-    : v.map(unwrap)
-  ).flat(Infinity)
+    ? v[0].flatMap((a,i) => [a, unwrap(v[i+1] ?? '')]).filter(v=>v)
+    : v.flatMap(unwrap)
   : [v];
 
 const init = calls => calls.length
   ? calls
   : [{ sel: '', props: [], group: undefined }];
 const combine = (calls1, calls2) => reduce(
-  init(calls1).map(c1 =>
+  init(calls1).flatMap(c1 =>
     init(calls2).map(c2 => ({
       important: c2.important,
       inline: c2.inline,
@@ -35,9 +34,9 @@ const combine = (calls1, calls2) => reduce(
       animations: { ...(c1.animations ?? {}), ...(c2.animations ?? {}) },
       transition: { ...(c1.transition ?? {}), ...(c2.transition ?? {}) },
       style: { ...(c1.style ?? {}), ...(c2.style ?? {}) },
-    }))).flat());
+    }))));
 const reduce = calls => Object.values(calls.reduce((acc, v) => {
-  const r = acc[[v.sel, v.media, v.important, v.group]] ??= {...v};
+  const r = acc[v.sel + v.media + v.important + v.group] ??= {...v};
   Object.assign((r.animations ??= {}), v.animations ?? {});
   Object.assign((r.transition ??= {}), v.transition ?? {});
   Object.assign((r.style ??= {}), v.style ?? {});
@@ -45,15 +44,14 @@ const reduce = calls => Object.values(calls.reduce((acc, v) => {
 }, {}));
 
 const Media = ([media, ...args], last) => combine(args, [{ media }]);
-const Style = (args, last) => combine(args, [{ inline: true }]);
-const Important = (args, last) => combine(args, [{ important: true }]);
-const Group = (args, last) => combine(args, [{ group: 'ref' }]);
-Group.chain = (key, last) => ({ group: 'create' });
+const Style = (args) => combine(args, [{ inline: true }]);
+const Important = (args) => combine(args, [{ important: true }]);
+const Group = (args) => combine(args, [{ group: 'ref' }]);
+Group.chain = (key) => ({ group: 'create' });
 
-const Transition = ([param, ...args], last) => args.concat({
+const Transition = ([param, ...args]) => args.concat({
   transition: Object.fromEntries(args
-    .map(arg => Object.keys(arg.style ?? {})).flat()
-    .filter(k => k != 'transition')
+    .flatMap(arg => Object.keys(arg.style ?? {}))
     .map(k => [k, param]))
 });
 const Animation = ([param, ...keyframes], last) => {
