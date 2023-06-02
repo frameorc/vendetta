@@ -1,0 +1,84 @@
+<script type="module">
+import { c, body } from 'https://frameorc.github.io/src/dom.js';
+import { unwrap } from '../src/index.js';
+import { methods } from '../themes/default.js';
+import V from '../adapters/frameorc.js';
+const [v, stylesheet] = V({
+  atomic: false,
+  resolve: {
+    color: {
+      'white': '#ffffff',
+      'black': 'hsla(216, 56%, 4%, 1)',
+      't1': 'hsla(216, 56%, 4%, 1)',
+      't2': 'rgba(84, 99, 122, 1)',
+      'grey': 'rgba(218, 221, 226, 1)',
+      '1': 'hsla(250, 77%, 63%, 1)',
+      '1l': 'hsla(250, 77%, 63%, 0.4)'
+    },
+    textSize: {
+      sm: '10px',
+      md: '12px',
+      lg: '14px',
+      xl: '18px'
+    },
+    lineHeight: {
+      md: '1.5',
+      lg: '2'
+    }
+  },
+  methods
+});
+
+const A = () => v.Media('screen',
+  v.Transition('2s', v.bg`#456`.tc`white`),
+  v.Hover.Transition('0.5s', v.tc`blue`.bg`#eee`),
+  () => v.Animation('2s alternate infinite ease-in-out', () => [
+    v.rot`${() => -2.5}deg`,
+    v.rot(() => `3.5deg`)
+  ])
+);
+  
+const B = () => {
+  const g = () => v.Group(v.Hover(
+    v.Transition('1s', v.tc`#222`),
+    v.Animation('2s infinite alternate ease', () => ({
+      0: () => v.ring`1 blue 1 cyan`,
+      100: v.ring`1 cyan 1 blue`,
+    })),
+  ));
+  const n = v.Animation('2s infinite alternate ease-in-out', () => ({
+    0: () => v.ring`1 pink 1 red`,
+    100: v.ring`1 red 1 pink`,
+  }));
+  return v(g, n)(
+    v.Animation('2s infinite alternate ease-in-out', v.rot`10deg`, v.rot`-10deg`)
+  );
+}
+
+body(v.Style(v.m`0`.p`4`),
+  c(v.row`l b`, '123'),
+  c(v.abs.ib`4`.il`12`.w.h`mx`.gap`4 2`.grid`4[6 12|24] 4[12|6]`,
+    Array.from({length: 16}, (_,i)=>
+      c(v.r.p`2`,
+        v.Transition('.5s', v.bg`#eee`),
+        v.Hover.Transition('1s', v.bg`#cde`),
+        i))),
+  c(v.Group,
+    v.col.gap`12`.p`4`.abs.w.h`40`.it`4`.il`24`.z`1`.rtr.rbl`8`.rtl.rbr`4`(A),
+    c.Span(v.td`~`.w`mn`.tws`nw`.ts`xl`, 'Hover me'),
+    c(v.m.p`2`.rtl.rbr`2`.rtr.rbl`.5`, B,
+      'Changes color on group hover')),
+  () => c.Pre(v.ts`md`.tc`black`.twb`a`.tws`pw`.abs.ir`16`.w`120`,
+    [...stylesheet.rules].map(v => v.cssText).join('\n'))
+);
+setTimeout(body.refresh)
+console.log('---')
+const C = () => v.Group(v.Hover.tc`blue`);
+console.log(unwrap(
+  v.Hover(
+    v.tc`red`
+  )
+  //v(() => v.Group(v.Hover.tc`red`, v.bg`blue`))(v.tc`cyan`, v.Animation('1s', v.bg`red`))
+))
+</script>
+
