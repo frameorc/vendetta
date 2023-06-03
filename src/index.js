@@ -171,7 +171,7 @@ export const Adapter = (api) => ({
   
   const [stylesheet, rules] = [new CSSStyleSheet, {}];
   if (adopt) document.adoptedStyleSheets.push(stylesheet);
-  api.addCSS = (str) => rules[str] ??= stylesheet.rules[
+  api.addCSS ??= (str) => rules[str] ??= stylesheet.rules[
     stylesheet.insertRule(str, stylesheet.cssRules.length)
   ];
   
