@@ -23,10 +23,8 @@ export const unwrap = v =>
     : v.flatMap(unwrap)
   : [v]);
 
-const init = calls => calls.length
-  ? calls
-  : [{ sel: '', props: [], group: undefined }];
-const combine = (calls1, calls2) => reduce(
+const init = calls => calls.length ? calls : [{ sel: '', group: undefined }];
+const combine = (calls1, calls2) =>
   init(calls1).flatMap(c1 =>
     init(calls2).map(c2 => ({
       important: c2.important,
@@ -37,7 +35,7 @@ const combine = (calls1, calls2) => reduce(
       animations: { ...(c1.animations ?? {}), ...(c2.animations ?? {}) },
       transition: { ...(c1.transition ?? {}), ...(c2.transition ?? {}) },
       style: { ...(c1.style ?? {}), ...(c2.style ?? {}) },
-    }))));
+    })));
 const reduce = calls => Object.values(calls.reduce((acc, v) => {
   const r = acc[v.sel + v.media + v.important + v.group] ??= {...v};
   Object.assign((r.animations ??= {}), v.animations ?? {});
@@ -46,6 +44,8 @@ const reduce = calls => Object.values(calls.reduce((acc, v) => {
   return acc;
 }, {}));
 
+const $ = (args, calls) => combine(calls, args);
+$.combinator = true;
 const Media = ([media, ...args]) => combine(args, [{ media }]);
 const Style = (args) => combine(args, [{ inline: true }]);
 const Important = (args) => combine(args, [{ important: true }]);
@@ -95,23 +95,23 @@ const Selector = (args) => args.map(arg => ({
 }));
 Selector.chain = (key, last) => ({ sel: (last.sel ?? '') + selStr(key) });
 
-const operators = { Style, Important, Group, Media, Animation, Transition }
 
+const operators = { $, Style, Important, Group, Media, Animation, Transition }
 const chain = (calls, key, ctx) => {
   const last = init(calls).at(-1);
   const op = operators[key] ?? (/[a-z]/.test(key[0]) ? Property : Selector);
-  if (calls.length > 1 && (!last.op || last.op == Group) || last.op && (
-    op == Property
-    ? last.op != Property && last.op != Selector
-    : last.op != Selector
-  )) throw new Error('not chainable');
-  return stack(ctx, [{...last, op, ...(op.chain?.(key, last) ?? {})}]);
+  if (op != Property && !op.combinator && (last.props || last.style))
+    throw new Error('not chainable');
+  const newLast = {...last, op, ...(op.chain?.(key, last) ?? {})};
+  return stack(ctx, (op.combinator ? calls : []).concat(newLast));
 }
 const call = (calls, args, ctx) => {
   const last = init(calls).at(-1);
-  return stack(ctx, last.op
-    ? combine([last], last.op(unwrap(args), last, ctx))
-    : combine(calls, unwrap(args))
+  args = unwrap(args);
+  return stack(ctx, !last.op ? calls.concat(args) :
+    last.op.combinator
+    ? last.op(args, calls, ctx)
+    : combine([last], last.op(args, last, ctx))
   );
 }
 const stack = (ctx, calls) => new Proxy(ctx.target, {

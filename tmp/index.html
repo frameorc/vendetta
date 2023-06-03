@@ -49,10 +49,11 @@ const B = () => {
     0: () => v.ring`1 pink 1 red`,
     100: v.ring`1 red 1 pink`,
   }));
-  return v(g, n)(
+  return v(g, n).$(
     v.Animation('2s infinite alternate ease-in-out', v.rot`10deg`, v.rot`-10deg`)
   );
 }
+
 body(v.Style(v.m`0`, v.Important(v.p`4`)),
   c(v.row`l b`, '123'),
   c(v.abs.ib`4`.il`12`.w.h`mx`.gap`4 2`.grid`4[6 12|24] 4[12|6]`,
@@ -73,7 +74,7 @@ setTimeout(body.refresh);
 console.log('---')
 const C = () => v.Group(v.Hover.tc`blue`);
 console.log(unwrap(
-  v.Style(v.m`0`, v.Important(v.p`4`)),
+  B
   //v(() => v.Group(v.Hover.tc`red`, v.bg`blue`))(v.tc`cyan`, v.Animation('1s', v.bg`red`))
 ))
 </script>
