@@ -122,11 +122,11 @@ const some = (args, r) => {
 const def = (obj, methodName, func) =>
   Object.fromEntries(Object.entries(obj).map(([name, props]) => [
     methodName(name),
-    (s, ...a) => props.forEach((p, i) => func(p)(s, ...a))
+    (s, ...a) => props.forEach((p) => func(p)(s, ...a))
   ]));
 
 const gridTrack = (size, str) => {
-  let [_, count, track=''] = str.match(/(.*)\[(.*)\]/) ?? [null, str];
+  let [ , count, track=''] = str.match(/(.*)\[(.*)\]/) ?? [null, str];
   count = +count;
   const [head, repeat=[]] = track.split('|').map(a =>
     a.split(/\s+/).filter(v=>v).map(size)
@@ -144,7 +144,13 @@ const gridTrack = (size, str) => {
   ].join(' ');
 }
 
-export const methods = ({ size, color, textSize, lineHeight }) => ({
+export const methods = ({
+  size,
+  color=v=>v,
+  textSize=v=>v,
+  lineHeight=v=>v,
+  shadow=v=>v
+}) => ({
   // composition
   grid: Object.assign((s, str) => {
     s.display = 'grid';
@@ -199,8 +205,8 @@ export const methods = ({ size, color, textSize, lineHeight }) => ({
   ...def(sides,   _=>'m'+_,  _=>(s, v) => s[`margin${_}`] = size(v)),
   ...def(corners, _=>'r'+_,  _=>(s, v) => s[`border${_}Radius`] = size(v)),
   ...def(sides,   _=>'br'+_, _=>(s, ...a) => (
-    s[`border${_}Color`] = some(a, color),
-    s[`border${_}Width`] = some(a, size),
+    s[`border${_}Color`] = some(a, color) ?? 'currentColor',
+    s[`border${_}Width`] = some(a, size) ?? '1px',
     s[`border${_}Style`] = some(a, alias.borderStyle) ?? 'solid'
   )),
   
@@ -236,7 +242,7 @@ export const methods = ({ size, color, textSize, lineHeight }) => ({
   stt: (s) => s.position = 'static',
   stc: (s) => s.position = 'sticky',
   va: (s, v) => s.verticalAlign = v,
-  sh: (s, sh) => s.boxShadow = shadow?.(sh) ?? sh,
+  sh: (s, sh) => s.boxShadow = shadow(sh),
   ov: (s, x, y=x) => (
     s.overflowX = alias.overflow[x] ?? x,
     s.overflowY = alias.overflow[y] ?? y
@@ -252,7 +258,7 @@ export const methods = ({ size, color, textSize, lineHeight }) => ({
   // transform
   ...Object.fromEntries([
     ['mat', 'matrix'],
-    ['mat', 'matrix3d'],
+    ['mat3', 'matrix3d'],
     ['skw', 'skew'],
     ['skwX', 'skewX'],
     ['skwY', 'skewY'],
