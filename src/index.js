@@ -75,17 +75,17 @@ const Animation = ([param, ...keyframes]) => {
 }
 
 const Property = (args, last, ctx) => {
-  const splitArgs = args.join('').split(/\s+/);
-  return [{
-    style: {
-      ...last.style,
-      ...last.props
-        .map(prop => ctx.methods[prop.key])
-        .reduce((acc, method) => (
-          method(acc, ...(method.rawArgs ? args : splitArgs)),
-        acc), {})
-    }
-  }];
+  args = args.join('');
+  args = /[()\[\]]/.test(args)
+    ? [...args.matchAll(/(?:\S+\(.+?\))|(?:\S+\[.+?\])|(?:\S+)/g)].flat()
+    : args.split(/\s+/);
+  const style = {
+    ...last.style,
+    ...last.props
+      .map(prop => ctx.methods[prop.key])
+      .reduce((acc, method) => (method(acc, ...args), acc), {})
+  }
+  return [{ style }];
 }
 Property.chain = (key, last) => ({ props: [...(last.props ?? []), {key}] });
 
@@ -107,7 +107,7 @@ const chain = (calls, key, ctx) => {
 }
 const call = (calls, args, ctx) => {
   const last = init(calls).at(-1);
-  args = unwrap(args);
+  args = args.length ? unwrap(args) : [];
   return stack(ctx, !last.op ? calls.concat(args) :
     last.op.combinator
     ? last.op(args, calls, ctx)
@@ -129,7 +129,7 @@ const process = (api, call, el, atomic, escape) => {
   if (group == 'create') return api.addClass(el, G);
   
   style.transition = Object.entries(transition).map(([k, v]) =>
-    k + ' ' + v
+    kebab(k) + ' ' + v
   ).join(',');
   style.animation = Object.values(animations).flat().map(v => {
     const str = v.keyframes.map(([ident, style]) =>
