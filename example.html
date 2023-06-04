@@ -1,0 +1,60 @@
+<script type="module">
+import { c, body } from 'https://frameorc.github.io/src/dom.js';
+import { methods } from 'https://frameorc.github.io/vendetta-themes/methods/default.js';
+import { unwrap } from './src/index.js';
+import V from './adapters/frameorc.js';
+
+const [v, stylesheet] = V({
+  unit: [8, 'px'],
+  resolve: {
+    color: {
+      T: 'transparent',
+      c0: '#eaeef0',
+      c1: '#ffffff',
+      c2: '#2196f3',
+    },
+    textSize: {
+      xs: '12px',
+      sm: '16px',
+      md: '24px'
+    },
+    shadow: {
+      sm: '0 1px 1px 0px rgba(0, 0, 0, 0.1)',
+      md: '0 2px 8px -3px rgba(0, 0, 0, 0.4)'
+    }
+  },
+  methods
+});
+
+const animateText = (duration) =>
+  v.Animation(`${duration} infinite alternate ease-in-out`, {
+    0: v.op`.2`.tsh`0 0 0 T`,
+    100: v.op`1`.tc`c2`.tsh`0 0 8px c2`
+  });
+
+body(v.bg`c0`,
+  c.Div(v.col.gap`8`.w`mn`.mh`a`.mv`6`.tf`sans-serif`,
+    c.Div(v.col.gap`2`,
+      c.Div(v.tw`bold`.ts`md`.tws`p`,
+        'A simple ', c.Span(animateText`2s`, 'V'), 'endetta example',
+      ),
+      c.Div(v.gap`4 2`.grid`4[12 6|24] 4[12|6]`,
+        Array.from({length: 16}, (_, i)=>
+          c.Div(v.r.p`2`.ts`sm`.sel`-`,
+            v.Transition('.3s', v.bg`c1`.ring`4px T`),
+            v.Hover.Transition('.6s', v.ring`2px c2`),
+            i == 0 ? 'Hover' : i
+          )
+        )
+      )
+    ),
+    c.Div(v.tw`600`.ts`md`,
+      'Generated css',
+      () => c.Pre(v.tw`400`.ts`xs`.tc`black`.twb`a`.tws`pw`.w`80`.sel`-`,
+        [...stylesheet.rules].map(v => v.cssText).join('\n')
+      )
+    ),
+  )
+);
+body.refresh();
+</script>
