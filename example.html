@@ -1,7 +1,10 @@
-<script type="module">
-import { c, body } from 'https://frameorc.github.io/src/dom.js';
+<html style="-webkit-text-size-adjust: 100%;">
+<head>
+  <meta name="viewport" content="width=720">
+</head>
+<script type="module" type="text/javascript">
+import { c, body, attr } from 'https://frameorc.github.io/src/dom.js';
 import { methods } from 'https://frameorc.github.io/vendetta-themes/methods/default.js';
-import { unwrap } from './src/index.js';
 import V from './adapters/frameorc.js';
 
 const [v, stylesheet] = V({
@@ -9,9 +12,10 @@ const [v, stylesheet] = V({
   resolve: {
     color: {
       T: 'transparent',
+      t0: '#222',
+      t1: '#2196f3',
       c0: '#eaeef0',
-      c1: '#ffffff',
-      c2: '#2196f3',
+      c1: '#fff',
     },
     textSize: {
       xs: '12px',
@@ -19,8 +23,8 @@ const [v, stylesheet] = V({
       md: '24px'
     },
     shadow: {
-      sm: '0 1px 1px 0px rgba(0, 0, 0, 0.1)',
-      md: '0 2px 8px -3px rgba(0, 0, 0, 0.4)'
+      sm: '0 2px 8px -3px rgba(0, 0, 0, 0.2)',
+      md: '0 6px 16px -2px rgba(0, 0, 0, 0.4)',
     }
   },
   methods
@@ -28,29 +32,35 @@ const [v, stylesheet] = V({
 
 const animateText = (duration) =>
   v.Animation(`${duration} infinite alternate ease-in-out`, {
-    0: v.op`.2`.tsh`0 0 0 T`,
-    100: v.op`1`.tc`c2`.tsh`0 0 8px c2`
+    0: v.op`.4`.tsh`0 0 0 T`,
+    100: v.op`1`.tc`t1`.tsh`0 0 8px t1`
   });
 
-body(v.bg`c0`,
+const srcUrl = 'https://github.com/frameorc/vendetta/blob/main/example.html';
+body(v.bg`c0`.tc`t0`.m`0`,
   c.Div(v.col.gap`8`.w`mn`.mh`a`.mv`6`.tf`sans-serif`,
     c.Div(v.col.gap`2`,
       c.Div(v.tw`bold`.ts`md`.tws`p`,
         'A simple ', c.Span(animateText`2s`, 'V'), 'endetta example',
+        c.A(attr.href(srcUrl).target('blank'),
+          v.flr.tc`t1`.td`n`,
+          v.Transition('.3s', v.op`.6`.brb`T`, v.Hover.op`1`.brb`t1`),
+          'View source')
       ),
       c.Div(v.gap`4 2`.grid`4[12 6|24] 4[12|6]`,
-        Array.from({length: 16}, (_, i)=>
-          c.Div(v.r.p`2`.ts`sm`.sel`-`,
-            v.Transition('.3s', v.bg`c1`.ring`4px T`),
-            v.Hover.Transition('.6s', v.ring`2px c2`),
+        Array.from({length: 16}, (_, i) =>
+          c.Div(v.r.p`2`.ts`sm`.sel`n`,
+            v.Transition('.25s', v.bg`c1`.ring`4px T`),
+            v.Hover.Transition('.5s', v.ring`2px t1`),
             i == 0 ? 'Hover' : i
           )
         )
       )
     ),
-    c.Div(v.tw`600`.ts`md`,
-      'Generated css',
-      () => c.Pre(v.tw`400`.ts`xs`.tc`black`.twb`a`.tws`pw`.w`80`.sel`-`,
+    c.Div(v.tw`bold`.ts`md`,
+      'Generated CSS',
+      () => c.Pre(v.tw`normal`.ts`xs`.tc`black`.tws`pw`.bg`c1`.p.r`2`.sel`n`,
+        v.Transition('.5s', v.sh`sm`, v.Hover.sh`md`),
         [...stylesheet.rules].map(v => v.cssText).join('\n')
       )
     ),
@@ -58,3 +68,4 @@ body(v.bg`c0`,
 );
 body.refresh();
 </script>
+</html>

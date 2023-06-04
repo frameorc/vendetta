@@ -146,7 +146,7 @@ const process = (api, call, el, atomic, escape) => {
     return v.param + ' ' + id;
   }).join(',');
   
-  for (const [k, v] of Object.entries(style)) if (!v) delete style[k];
+  for (const [k, v] of Object.entries(style)) if (!v && v!=0) delete style[k];
   if (!Object.keys(style).length) return;
   if (inline) return api.addStyle(el, style);
   
