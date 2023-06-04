@@ -107,7 +107,7 @@ const chain = (calls, key, ctx) => {
 }
 const call = (calls, args, ctx) => {
   const last = init(calls).at(-1);
-  args = args.length ? unwrap(args) : [];
+  if (args.length) args = unwrap(args);
   return stack(ctx, !last.op ? calls.concat(args) :
     last.op.combinator
     ? last.op(args, calls, ctx)
@@ -115,9 +115,15 @@ const call = (calls, args, ctx) => {
   );
 }
 const stack = (ctx, calls) => new Proxy(ctx.target, {
-  get: (_, key) => key == CALLS ? reduce(calls) : chain(calls, key, ctx),
-  apply: (_, __, args) => ctx.process(args, calls) || call(calls, args, ctx)
+  get: (_, key) => key == CALLS ? reduce(calls) :
+    chain(calls, key, ctx),
+  apply: (_, __, args) => ctx.process(args, calls, ctx) ||
+    call(calls, args, ctx)
 });
+const finalize = (calls, ctx) => {
+  const last = init(calls).at(-1);
+  return last.props?.length ? call(calls, [], ctx)[CALLS] : calls;
+}
 
 const process = (api, call, el, atomic, escape) => {
   const {
@@ -178,10 +184,11 @@ export const Adapter = (api) => ({
   const v = stack({
     target: api.target,
     methods: methods?.(resolve) ?? {},
-    process: (args, calls) => {
+    process: (args, calls, ctx) => {
       const el = api.element(args);
       if (!el) return false;
-      for (const call of calls) process(api, call, el, atomic, escape);
+      for (const call of finalize(calls, ctx))
+        process(api, call, el, atomic, escape);
       return true;
     }
   }, []);
