@@ -119,11 +119,13 @@ const stack = (ctx, calls) => new Proxy(ctx.target, {
     stack(ctx, call(calls, args))
 });
 
+const ID = ((v={}, i=0) => (s) => v[s] ??= i++)();
 const escape = ((pairs=Object.fromEntries(
   [...'  (⦗)⦘:᛬.ꓸ,‚[❲]❳|⼁'.matchAll(/../g)].map(v => v[0].split(''))
 )) => str => CSS.escape(str.replaceAll(/./g, v => pairs[v] ?? v)))();
 
-const ID = ((v={}, i=0) => (s) => v[s] ??= i++)();
+const argsc = f => 
+  f.argsCount ??= String(f).match(/\.*\((.*)\)/)?.[1]?.split?.(',')?.length;
 const process = (api, call, el, methods) => {
   const { group, important, media='', inline, props=[], animations=[] } = call;
   const G = '𝔾', M = '𝕄', A = '𝔸', T = '𝕋';
@@ -134,7 +136,7 @@ const process = (api, call, el, methods) => {
   
   for (const prop of props) {
     const style = {}, key = prop.key, transition = prop.transition;
-    const args = methods[key].acceptArgs ? prop.args : [];
+    const args = argsc(methods[key]) > 1 ? prop.args : [];
     methods[key](style, ...(args ?? []));
     const cls = escape(key + '(' + args.join(' ') + ')');
     entries.push([cls, style]);
@@ -174,9 +176,6 @@ const process = (api, call, el, methods) => {
 }
 
 export const Adapter = (api) => (methods) => {
-  for (const method of Object.values(methods)) method.acceptArgs =
-    String(method).match(/\.*\((.*)\)/)?.[1]?.split?.(',')?.length > 1;
-  
   const [stylesheet, rules] = [new CSSStyleSheet, {}];
   document.adoptedStyleSheets.push(stylesheet);
   
