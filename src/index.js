@@ -173,18 +173,13 @@ const process = (api, call, el, methods) => {
   }
 }
 
-export const Adapter = (api) => ({
-  adopt=true, unit=[8,'px'], resolve={}, methods
-}) => {
-  for (const [k, r] of Object.entries(resolve))
-    resolve[k] = typeof r == 'function' ? r : v => r[v] ?? v;
-  resolve.size = v => isNaN(+v) ? v : +v * unit[0] + unit[1];
-  methods = methods?.(resolve) ?? {};
+export const Adapter = (api) => (methods) => {
   for (const method of Object.values(methods)) method.acceptArgs =
     String(method).match(/\.*\((.*)\)/)?.[1]?.split?.(',')?.length > 1;
   
   const [stylesheet, rules] = [new CSSStyleSheet, {}];
-  if (adopt) document.adoptedStyleSheets.push(stylesheet);
+  document.adoptedStyleSheets.push(stylesheet);
+  
   api.addCSS ??= (id, str) => rules[id] ??= stylesheet.rules[
     stylesheet.insertRule(str, stylesheet.cssRules.length)
   ];

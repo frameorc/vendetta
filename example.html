@@ -5,12 +5,12 @@
 </head>
 <script type="module" type="text/javascript">
 import { c, body, attr } from 'https://frameorc.github.io/src/dom.js';
-import { methods } from 'https://frameorc.github.io/vendetta-themes/methods/default.js';
+import { methods } from '../vendetta-themes/methods/default.js';
 import V from './adapters/frameorc.js';
 
-const [v, stylesheet] = V({
-  unit: [8, 'px'],
-  resolve: {
+const [v, stylesheet] = V(
+  methods({
+    unit: [8, 'px'],
     color: {
       T: 'transparent',
       t0: '#222',
@@ -27,9 +27,8 @@ const [v, stylesheet] = V({
       sm: '0 2px 8px -3px rgba(0, 0, 0, 0.2)',
       md: '0 6px 16px -2px rgba(0, 0, 0, 0.4)',
     }
-  },
-  methods
-});
+  })
+);
 
 const animateText = (duration) =>
   v.Animation(`${duration} infinite alternate ease-in-out`, {
