@@ -136,8 +136,8 @@ const process = (api, call, el, methods) => {
   
   for (const prop of props) {
     const style = {}, key = prop.key, transition = prop.transition;
-    const args = argsc(methods[key]) > 1 ? prop.args : [];
-    methods[key](style, ...(args ?? []));
+    const args = argsc(methods[key]) > 0 ? prop.args : [];
+    methods[key].call(style, ...(args ?? []));
     const cls = escape(key + '(' + args.join(' ') + ')');
     entries.push([cls, style]);
     if (transition) Object.keys(style)
@@ -150,7 +150,8 @@ const process = (api, call, el, methods) => {
   for (const {param, keyframes} of animations) {
     const str = Object.entries(keyframes).map(([ident, props]) => {
       const style = {};
-      for (const {key, args} of props) methods[key](style, ...(args ?? []));
+      for (const {key, args} of props)
+        methods[key].call(style, ...(args ?? []));
       return ident + '% ' + styleStr(style, false);
     }).join('\n');
     const id = escape(A + ID(str));
