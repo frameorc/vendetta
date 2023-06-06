@@ -1,6 +1,7 @@
 <html style="-webkit-text-size-adjust: 100%;">
 <head>
   <meta name="viewport" content="width=720">
+  <meta charset="utf-8">
 </head>
 <script type="module" type="text/javascript">
 import { c, body, attr } from 'https://frameorc.github.io/src/dom.js';
@@ -36,13 +37,13 @@ const animateText = (duration) =>
     100: v.op`1`.tc`t1`.tsh`0 0 8px t1`
   });
 
-const srcUrl = 'https://github.com/frameorc/vendetta/blob/main/example.html';
-body(v.bg`c0`.tc`t0`.m`0`,
-  c.Div(v.col.gap`8`.w`mn`.mh`a`.mv`6`.tf`sans-serif`,
-    c.Div(v.col.gap`2`,
+const url = 'https://github.com/frameorc/vendetta/blob/main/example.html';
+body(v.Style(v.bg`c0`.tc`t0`.m`0`),
+  c.Div(v.col().gap`8`.w`mn`.mh`a`.mv`6`.tf`sans-serif`,
+    c.Div(v.col().gap`2`,
       c.Div(v.tw`bold`.ts`md`.tws`p`,
         'A simple ', c.Span(animateText`2s`, 'V'), 'endetta example',
-        c.A(attr.href(srcUrl).target('blank'),
+        c.A(attr.href(url).target('blank'),
           v.flr.tc`t1`.td`n`,
           v.Transition('.3s', v.op`.6`.brb`T`, v.Hover.op`1`.brb`t1`),
           'View source')
