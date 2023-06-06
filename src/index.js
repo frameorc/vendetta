@@ -76,10 +76,11 @@ const Animation = ([param, ...keyframes], last) => {
 }
 
 const Property = (args, last) => {
-  args = args.join('');
-  args = /[()\[\]]/.test(args)
-    ? [...args.matchAll(/(?:\S+\(.+?\))|(?:\S+\[.+?\])|(?:\S+)/g)].flat()
-    : args.split(/\s+/);
+  args = args.flatMap(
+    arg => typeof arg == 'object' ? [arg]
+    : /[()\[\]]/.test(arg)
+      ? [...arg.matchAll(/(?:\S+\(.+?\))|(?:\S+\[.+?\])|(?:\S+)/g)].flat()
+      : arg.split(/\s+/));
   const props = [...last.props];
   props.findLast((prop, i) => !(!prop.args && (
     props[i] = { ...prop, args }
@@ -109,8 +110,9 @@ const chain = (calls, key) => {
 const call = (calls, args) => {
   const last = init(calls).at(-1);
   if (args.length) args = unwrap(args);
-  return !last.op ? calls.concat(args) :
+  calls = !last.op ? calls.concat(args) :
     last.op(args, last.op.combinator ? calls : last);
+  return (calls.at(-1).op = null, calls);
 }
 const stack = (ctx, calls) => new Proxy(ctx.target, {
   get: (_, key) => key == CALLS ? combine([], calls) :
@@ -121,7 +123,7 @@ const stack = (ctx, calls) => new Proxy(ctx.target, {
 
 const ID = ((v={}, i=0) => (s) => v[s] ??= i++)();
 const escape = ((pairs=Object.fromEntries(
-  [...'  (⦗)⦘:᛬.ꓸ,‚[❲]❳|⼁'.matchAll(/../g)].map(v => v[0].split(''))
+  [...'  (⦗)⦘:᛬.ꓸ,‚[❲]❳|⼁#﹟<﹤>﹥'.matchAll(/../g)].map(v => v[0].split(''))
 )) => str => CSS.escape(str.replaceAll(/./g, v => pairs[v] ?? v)))();
 
 const argsc = f => 
@@ -138,7 +140,11 @@ const process = (api, call, el, methods) => {
     const style = {}, key = prop.key, transition = prop.transition;
     const args = argsc(methods[key]) > 0 ? prop.args : [];
     methods[key].call(style, ...(args ?? []));
-    const cls = escape(key + '(' + args.join(' ') + ')');
+    const cls = escape(key + '(' +
+      (args.some(arg => typeof arg == 'object')
+      ? '<' + ID(JSON.stringify(args)) + '>'
+      : args.join(' '))
+    + ')');
     entries.push([cls, style]);
     if (transition) Object.keys(style)
       .forEach(v => transitions.push(kebab(v) + ' ' + transition));
@@ -177,6 +183,9 @@ const process = (api, call, el, methods) => {
 }
 
 export const Adapter = (api) => (methods) => {
+  if (methods.css) throw new Error("'css' property must be undefined");
+  methods.css = function (obj) { Object.assign(this, obj); }
+  
   const [stylesheet, rules] = [new CSSStyleSheet, {}];
   document.adoptedStyleSheets.push(stylesheet);
   
