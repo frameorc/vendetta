@@ -145,16 +145,16 @@ const process = (api, call, el, methods) => {
     const transition = transitions.join(',');
     entries.push([escape(T + ID(transition)), { transition }]);
   }
-  entries.push(...Object.values(animations).flat().map(v => {
-    const str = Object.entries(v.keyframes).map(([ident, props]) => {
+  for (const {param, keyframes} of animations) {
+    const str = Object.entries(keyframes).map(([ident, props]) => {
       const style = {};
       for (const {key, args} of props) methods[key](style, ...(args ?? []));
       return ident + '% ' + styleStr(style, false);
     }).join('\n');
     const id = escape(A + ID(str));
     api.addCSS('_' + id, `@keyframes ${id} {\n${str}\n}`);
-    return [id, { animation: v.param + ' ' + id }];
-  }));
+    entries.push([id, { animation: param + ' ' + id }]);
+  }
   
   for (let [cls, style] of entries) {
     if (inline) { api.addStyle(el, style); continue; }
