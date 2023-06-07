@@ -8,7 +8,7 @@ const selStr = str => str.replace(/[$A-Z].+?[^()]/g, key =>
   ? '::' + kebab(key.slice(1))
   : ':' + kebab(key).slice(1));
 const styleStr = (style, important) => `{${
-  Object.entries(style).map(([k, v]) =>
+  Object.entries(style).map(([k, v]) => k == '$cls' ? '' :
     kebab(k) + ': ' + v + (important ? ' !important' : '') + ';'
   ).join('')
 }}`;
@@ -144,7 +144,7 @@ const process = (api, call, el, methods) => {
     const style = css ?? methods[key](...(args ?? []));
     const cls = (
       css
-      ? CSS + '(' + JSON.stringify(css) + ')'
+      ? css.$cls ?? CSS + '(' + JSON.stringify(css) + ')'
       : key + '(' + (argsc(methods[key]) > 0 ? args.join(' ') : '') + ')'
     );
     entries.push([cls, style]);

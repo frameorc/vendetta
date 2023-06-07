@@ -37,7 +37,7 @@ const animateText = (duration) =>
   });
 
 const url = 'https://github.com/frameorc/vendetta/blob/main/example.html';
-body(v.bg`c0`.tc`t0`.m`0`({ WebkitTextSizeAdjust: '100%' }),
+body(v.bg`c0`.tc`t0`.m`0`({ $cls: 'test', textSizeAdjust: '100%' }),
   c.Div(v.col().gap`8`.w`mn`.mh`a`.mv`6`.tf`sans-serif`,
     c.Div(v.col().gap`2`,
       c.Div(v.tw`bold`.ts`md`.tws`p`,
