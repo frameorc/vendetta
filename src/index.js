@@ -14,18 +14,19 @@ const styleStr = (style, important) => `{${
 }}`;
 
 const CALLS = Symbol('VENDETTA_CALLS');
+const Call = ({ sel='', media='', group, props=[], animations=[] }) =>
+  ({ sel, media, group, props, animations });
 export const unwrap = v =>
   v && v[CALLS] || (
   typeof v == 'function' ? unwrap(v())
   : Array.isArray(v) ?
-    Object.hasOwn(v[0], 'raw')
+    v[0] && Object.hasOwn(v[0], 'raw')
     ? v[0].flatMap((a, i) => !v[i+1] ? a : [a, unwrap(v[i+1])])
     : v.flatMap(unwrap)
+  : v && typeof v == 'object' ? [Call({ props: [{ css: v }] })]
   : [v]);
 
-const init = calls => calls.length ? calls : [{
-  sel: '', media: '', group: undefined, props: [], animations: []
-}];
+const init = calls => calls.length ? calls : [Call({})];
 const combine = (calls1, calls2) => {
   const acc = {};
   for (const c1 of init(calls1)) for (const c2 of init(calls2)) {
@@ -41,19 +42,21 @@ const combine = (calls1, calls2) => {
   return Object.values(acc);
 }
 
-const $ = (args, calls) => combine(calls, args);
+const concat = (args, calls) => calls.concat(unwrap(args));
+concat.combinator = true;
+const $ = (args, calls) => combine(calls, unwrap(args));
 $.combinator = true;
 const Media = ([media, ...args], last) =>
-  combine([{ ...last, media }], args);
+  combine([{ ...last, media }], unwrap(args));
 const Style = (args, last) =>
-  combine([{ ...last, inline: true }], args);
+  combine([{ ...last, inline: true }], unwrap(args));
 const Important = (args, last) =>
-  combine([{ ...last, important: true }], args);
+  combine([{ ...last, important: true }], unwrap(args));
 const Group = (args, last) =>
-  combine([{ ...last, group: 'ref' }], args);
+  combine([{ ...last, group: 'ref' }], unwrap(args));
 Group.chain = () => ({ group: 'create' });
 
-const Transition = ([param, ...args], last) => args.map(arg =>
+const Transition = ([param, ...args], last) => unwrap(args).map(arg =>
   combine([last], [{
     ...arg,
     props: arg.props.map(prop => ({...prop, transition: param}))
@@ -76,7 +79,7 @@ const Animation = ([param, ...keyframes], last) => {
 }
 
 const Property = (args, last) => {
-  args = args.flatMap(
+  args = unwrap(args).flatMap(
     arg => typeof arg == 'object' ? [arg]
     : /[()\[\]]/.test(arg)
       ? [...arg.matchAll(/(?:\S+\(.+?\))|(?:\S+\[.+?\])|(?:\S+)/g)].flat()
@@ -89,7 +92,7 @@ const Property = (args, last) => {
 }
 Property.chain = (key, last) => ({ props: [...(last.props ?? []), {key}] });
 
-const Selector = (args, last) => args.map(arg => ({
+const Selector = (args, last) => unwrap(args).map(arg => ({
   ...arg,
   sel: last.sel + (arg.sel ? '(' + arg.sel + ')' : ''),
 }));
@@ -104,15 +107,14 @@ const chain = (calls, key) => {
   const op = operators[key] ?? (/[a-z]/.test(key[0]) ? Property : Selector);
   if (op != Property && !op.combinator && last.props.length)
     throw new Error('not chainable');
-  const newLast = {...last, op, ...(op.chain?.(key, last) ?? {})};
-  return (op.combinator ? calls : []).concat(newLast);
+  const curr = Object.assign({...last, op }, op.chain?.(key, last));
+  return (op.combinator ? calls : []).concat(curr);
 }
+
 const call = (calls, args) => {
   const last = init(calls).at(-1);
-  if (args.length) args = unwrap(args);
-  calls = !last.op ? calls.concat(args) :
-    last.op(args, last.op.combinator ? calls : last);
-  return (calls.at(-1).op = null, calls);
+  calls = last.op(args, last.op.combinator ? calls : last);
+  return (calls.at(-1).op = concat, calls);
 }
 const stack = (ctx, calls) => new Proxy(ctx.target, {
   get: (_, key) => key == CALLS ? combine([], calls) :
@@ -123,28 +125,28 @@ const stack = (ctx, calls) => new Proxy(ctx.target, {
 
 const ID = ((v={}, i=0) => (s) => v[s] ??= i++)();
 const escape = ((pairs=Object.fromEntries(
-  [...'  (⦗)⦘:᛬.ꓸ,‚[❲]❳|⼁#﹟<﹤>﹥'.matchAll(/../g)].map(v => v[0].split(''))
+  [...`  (⦗)⦘:᛬.ꓸ,‚[❲]❳|⼁#﹟<﹤>﹥{❴}❵"“'‘%％`.matchAll(/../g)]
+    .map(v => v[0].split(''))
 )) => str => CSS.escape(str.replaceAll(/./g, v => pairs[v] ?? v)))();
 
 const argsc = f => 
   f.argsCount ??= String(f).match(/\.*\((.*)\)/)?.[1]?.split?.(',')?.length;
 const process = (api, call, el, methods) => {
-  const { group, important, media='', inline, props=[], animations=[] } = call;
-  const G = '𝔾', M = '𝕄', A = '𝔸', T = '𝕋';
+  const {
+    sel, group, important, media='', inline, props=[], animations=[]
+  } = call;
+  const G = '𝔾', M = '𝕄', A = '𝔸', T = '𝕋', CSS = 'ℂ𝕊𝕊';
   const entries = [], transitions = [];
-  const sel = call.sel, csssel = sel.split('.').map(selStr).join('');
   
   if (group == 'create') return api.addClass(el, G);
   
-  for (const prop of props) {
-    const style = {}, key = prop.key, transition = prop.transition;
-    const args = argsc(methods[key]) > 0 ? prop.args : [];
-    methods[key].call(style, ...(args ?? []));
-    const cls = escape(key + '(' +
-      (args.some(arg => typeof arg == 'object')
-      ? '<' + ID(JSON.stringify(args)) + '>'
-      : args.join(' '))
-    + ')');
+  for (const {css, key, args, transition} of props) {
+    const style = css ?? methods[key](...(args ?? []));
+    const cls = (
+      css
+      ? CSS + '(' + JSON.stringify(css) + ')'
+      : key + '(' + (argsc(methods[key]) > 0 ? args.join(' ') : '') + ')'
+    );
     entries.push([cls, style]);
     if (transition) Object.keys(style)
       .forEach(v => transitions.push(kebab(v) + ' ' + transition));
@@ -156,8 +158,8 @@ const process = (api, call, el, methods) => {
   for (const {param, keyframes} of animations) {
     const str = Object.entries(keyframes).map(([ident, props]) => {
       const style = {};
-      for (const {key, args} of props)
-        methods[key].call(style, ...(args ?? []));
+      for (const {css, key, args} of props)
+        Object.assign(style, css ?? methods[key](...(args ?? [])));
       return ident + '% ' + styleStr(style, false);
     }).join('\n');
     const id = escape(A + ID(str));
@@ -171,11 +173,12 @@ const process = (api, call, el, methods) => {
       (media ? M + ID(media) + ':' : '') +
       (group ? G + ':' : '') +
       (sel ? sel + '.' : '')
-    ) + cls;
+    ) + escape(cls);
+    const cls1 = escape(cls), sel1 = sel.split('.').map(selStr).join('');
     style = (
       group == 'ref'
-      ? `.${G}${csssel} :not(.${G}) .${cls}, .${G}${csssel} > .${cls}`
-      : `.${cls}${csssel}`
+      ? `.${G}${sel1} :not(.${G}) .${cls1}, .${G}${sel1} > .${cls1}`
+      : `.${cls1}${sel1}`
     ) + styleStr(style, important);
     api.addClass(el, cls);
     api.addCSS(cls, media ? `@media ${media} {${style}}` : style);
@@ -183,9 +186,6 @@ const process = (api, call, el, methods) => {
 }
 
 export const Adapter = (api) => (methods) => {
-  if (methods.css) throw new Error("'css' property must be undefined");
-  methods.css = function (obj) { Object.assign(this, obj); }
-  
   const [stylesheet, rules] = [new CSSStyleSheet, {}];
   document.adoptedStyleSheets.push(stylesheet);
   

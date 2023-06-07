@@ -1,4 +1,4 @@
-<html style="-webkit-text-size-adjust: 100%;">
+<html>
 <head>
   <meta name="viewport" content="width=720">
   <meta charset="utf-8">
@@ -37,7 +37,7 @@ const animateText = (duration) =>
   });
 
 const url = 'https://github.com/frameorc/vendetta/blob/main/example.html';
-body(v.Style(v.bg`c0`.tc`t0`.m`0`), v.css({ color: 'red' }),
+body(v.bg`c0`.tc`t0`.m`0`({ WebkitTextSizeAdjust: '100%' }),
   c.Div(v.col().gap`8`.w`mn`.mh`a`.mv`6`.tf`sans-serif`,
     c.Div(v.col().gap`2`,
       c.Div(v.tw`bold`.ts`md`.tws`p`,
