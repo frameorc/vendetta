@@ -5,8 +5,8 @@
 </head>
 <script type="module" type="text/javascript">
 import { c, body, attr } from 'https://frameorc.github.io/src/dom.js';
-import { methods } from '../vendetta-themes/methods/default.js';
-import V from './adapters/frameorc.js';
+import { methods } from '../../vendetta-themes/methods/default.js';
+import V from '../adapters/frameorc.js';
 
 const [v, stylesheet] = V(
   methods({
@@ -36,7 +36,7 @@ const animateText = (duration) =>
     100: v.op`1`.tc`t1`.tsh`0 0 8px t1`
   });
 
-const url = 'https://github.com/frameorc/vendetta/blob/main/example.html';
+const url = 'https://github.com/frameorc/vendetta/blob/main/examples/frameorc.html';
 body(v.bg`c0`.tc`t0`.m`0`({ $cls: 'test', textSizeAdjust: '100%' }),
   c.Div(v.col().gap`8`.w`mn`.mh`a`.mv`6`.tf`sans-serif`,
     c.Div(v.col().gap`2`,

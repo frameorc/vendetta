@@ -117,8 +117,9 @@ const call = (calls, args) => {
   return (calls.at(-1).op = concat, calls);
 }
 const stack = (ctx, calls) => new Proxy(ctx.target, {
-  get: (_, key) => key == CALLS ? combine([], calls) :
-    stack(ctx, chain(calls, key)),
+  get: (_, key) => key == CALLS ? combine([], calls)
+    : typeof key == 'symbol' ? ctx.target[key]
+    : stack(ctx, chain(calls, key)),
   apply: (_, __, args) => ctx.process(args, calls) ||
     stack(ctx, call(calls, args))
 });
