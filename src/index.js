@@ -81,8 +81,10 @@ const Animation = ([param, ...keyframes], last) => {
 const Property = (args, last) => {
   args = unwrap(args).flatMap(
     arg => typeof arg == 'object' ? [arg]
-    : /[()\[\]]/.test(arg)
-      ? [...arg.matchAll(/(?:\S+\(.+?\))|(?:\S+\[.+?\])|(?:\S+)/g)].flat()
+    : /[\'\"()\[\]]/.test(arg)
+      ? [...arg.matchAll(
+          /(?:\S*\'.+?\')|(?:\S*\".+?\")|(?:\S*\(.+?\))|(?:\S*\[.+?\])|(?:\S+)/g
+        )].flat()
       : arg.split(/\s+/));
   const props = [...last.props];
   props.findLast((prop, i) => !(!prop.args && (
@@ -130,8 +132,8 @@ const escape = ((pairs=Object.fromEntries(
     .map(v => v[0].split(''))
 )) => str => CSS.escape(str.replaceAll(/./g, v => pairs[v] ?? v)))();
 
-const argsc = f => 
-  f.argsCount ??= String(f).match(/\.*\((.*)\)/)?.[1]?.split?.(',')?.length;
+const argsCount = f => f.argsCount ??=
+  String(f).match(/\.*?\((.*?)\)/)?.[1]?.split?.(',').filter(v => v)?.length;
 const process = (call, methods) => {
   const {
     sel, group, important, inline, media='', props=[], animations=[]
@@ -167,7 +169,7 @@ const process = (call, methods) => {
       cls: (
         css
         ? css.$cls ?? CSS + '(' + JSON.stringify(css) + ')'
-        : key + '(' + (argsc(methods[key]) > 0 ? args.join(' ') : '') + ')'
+        : key + '(' + (argsCount(methods[key]) > 0 ? args.join(' ') : '') + ')'
       ),
     })),
     ...(!transition ? [] : [() => fmt({
