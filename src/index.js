@@ -132,77 +132,96 @@ const escape = ((pairs=Object.fromEntries(
 
 const argsc = f => 
   f.argsCount ??= String(f).match(/\.*\((.*)\)/)?.[1]?.split?.(',')?.length;
-const process = (api, call, el, methods) => {
+const process = (call, methods) => {
   const {
-    sel, group, important, media='', inline, props=[], animations=[]
+    sel, group, important, inline, media='', props=[], animations=[]
   } = call;
   const G = '𝔾', M = '𝕄', A = '𝔸', T = '𝕋', CSS = 'ℂ𝕊𝕊';
-  const entries = [], transitions = [];
+  if (group == 'create') return [() => ({ cls: G })];
   
-  if (group == 'create') return api.addClass(el, G);
-  
-  for (const {css, key, args, transition} of props) {
-    const style = css ?? methods[key](...(args ?? []));
-    const cls = (
-      css
-      ? css.$cls ?? CSS + '(' + JSON.stringify(css) + ')'
-      : key + '(' + (argsc(methods[key]) > 0 ? args.join(' ') : '') + ')'
-    );
-    entries.push([cls, style]);
-    if (transition) Object.keys(style)
-      .forEach(v => transitions.push(kebab(v) + ' ' + transition));
-  }
-  if (transitions.length) {
-    const transition = transitions.join(',');
-    entries.push([escape(T + ID(transition)), { transition }]);
-  }
-  for (const {param, keyframes} of animations) {
-    const str = Object.entries(keyframes).map(([ident, props]) => {
-      const style = {};
-      for (const {css, key, args} of props)
-        Object.assign(style, css ?? methods[key](...(args ?? [])));
-      return ident + '% ' + styleStr(style, false);
-    }).join('\n');
-    const id = escape(A + ID(str));
-    api.addCSS('_' + id, `@keyframes ${id} {\n${str}\n}`);
-    entries.push([id, { animation: param + ' ' + id }]);
-  }
-  
-  for (let [cls, style] of entries) {
-    if (inline) { api.addStyle(el, style); continue; }
+  const fmt = ({ cls, style, css }) => {
     cls = escape(
       (media ? M + ID(media) + ':' : '') +
       (group ? G + ':' : '') +
       (sel ? sel + '.' : '')
     ) + escape(cls);
-    const cls1 = escape(cls), sel1 = sel.split('.').map(selStr).join('');
+    const cls1 = escape(cls);
+    const sel1 = sel.split('.').map(selStr).join('');
     style = (
       group == 'ref'
       ? `.${G}${sel1} :not(.${G}) .${cls1}, .${G}${sel1} > .${cls1}`
       : `.${cls1}${sel1}`
     ) + styleStr(style, important);
-    api.addClass(el, cls);
-    api.addCSS(cls, media ? `@media ${media} {${style}}` : style);
+    if (media) style = `@media ${media} {${style}}`;
+    return { cls, style, css, inline };
   }
+  
+  const transition = props.filter(p => p.transition).flatMap(p => {
+    const style = p.css ?? methods[p.key](...(p.args ?? []));
+    return Object.keys(style).map(k => kebab(k) + ' ' + p.transition)
+  }).join(',');
+  
+  return [
+    ...props.map(({css, key, args}) => () => fmt({
+      style: css ?? methods[key](...(args ?? [])),
+      cls: (
+        css
+        ? css.$cls ?? CSS + '(' + JSON.stringify(css) + ')'
+        : key + '(' + (argsc(methods[key]) > 0 ? args.join(' ') : '') + ')'
+      ),
+    })),
+    ...(!transition ? [] : [() => fmt({
+      style: { transition },
+      cls: escape(T + ID(transition)),
+    })]),
+    ...animations.map(({param, keyframes}) => () => {
+      const str = Object.entries(keyframes).map(([ident, props]) => {
+        const style = {};
+        for (const {css, key, args} of props)
+          Object.assign(style, css ?? methods[key](...(args ?? [])));
+        return ident + '% ' + styleStr(style, false);
+      }).join('\n');
+      const id = escape(A + ID(str));
+      return fmt({
+        css: `@keyframes ${id} {\n${str}\n}`,
+        style: { animation: param + ' ' + id },
+        cls: id,
+      })
+    })
+  ];
 }
 
 export const Adapter = (api) => (methods) => {
-  const [stylesheet, rules] = [new CSSStyleSheet, {}];
+  const stylesheet = new CSSStyleSheet;
   document.adoptedStyleSheets.push(stylesheet);
-  
-  api.addCSS ??= (id, str) => rules[id] ??= stylesheet.rules[
-    stylesheet.insertRule(str, stylesheet.cssRules.length)
-  ];
+
+  const pastUpdates = {};
+  const processUpdate = ({ cls, style, css }, force) => {
+    if (pastUpdates[cls] && !force) return;
+    if (style) stylesheet.insertRule(style, stylesheet.cssRules.length)
+    if (css) stylesheet.insertRule(css, stylesheet.cssRules.length)
+  }
+  const recalculate = () => {
+    stylesheet.replace('');
+    for (const update of Object.values(pastUpdates))
+      processUpdate(update(), true);
+  }
   
   const v = stack({
     target: api.target,
     process: (args, calls) => {
       const el = api.element(args);
       if (!el) return false;
-      for (const call of calls)
-        process(api, call, el, methods);
+      const updates = calls.flatMap(call => process(call, methods));
+      for (const update of updates) {
+        const { cls, css, style, inline } = update();
+        processUpdate({ cls, css, style }, false);
+        pastUpdates[cls] = update;
+        if (inline) api.addStyle(el, style);
+        else api.addClass(el, cls);
+      }
       return true;
     }
   }, []);
-  return [v, stylesheet];
+  return {v, stylesheet, recalculate};
 }

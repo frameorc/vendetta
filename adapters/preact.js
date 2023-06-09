@@ -1,6 +1,6 @@
 import { Adapter } from '../src/index.js';
 
-const MARK = Symbol('NODE');
+const MARK = Symbol('VENDETTA');
 const traverse = (node) => {
   if (node?.[MARK]) return node;
   if (Array.isArray(node)) return node.map(traverse);
@@ -33,7 +33,10 @@ const traverse = (node) => {
       else ch = [traverse(ch)];
     }
     if (Array.isArray(ch)) {
-      for (const c of ch) if (c?.[MARK]) c(MARK, node);
+      const normalChildren = ch.filter(v => !v?.[MARK]);
+      const vendettaNodes = ch.filter(v => v?.[MARK]);
+      for (const v of vendettaNodes) v(MARK, node);
+      ch = normalChildren;
     }
     node.props.children = ch;
   }

@@ -8,16 +8,26 @@
       import V, { VendettaRoot } from '../adapters/preact.js';
       import { methods } from '../../vendetta-themes/methods/default.js';
       
-      const [v, stylesheet] = V(
+      let theme = 'light';
+      const light = {
+        T: 'transparent',
+        t0: '#222',
+        t1: '#2196f3',
+        c0: '#eaeef0',
+        c1: '#fff',
+      };
+      const dark = {
+        T: 'transparent',
+        t0: '#fff',
+        t1: '#a3d6ff',
+        c0: '#424242',
+        c1: '#4b5668',
+      };
+      
+      const {v, stylesheet, recalculate} = V(
         methods({
           unit: [8, 'px'],
-          color: {
-            T: 'transparent',
-            t0: '#222',
-            t1: '#2196f3',
-            c0: '#eaeef0',
-            c1: '#fff',
-          },
+          color: key => ({ light, dark })[theme][key],
           textSize: {
             xs: '12px',
             sm: '16px',
@@ -30,29 +40,44 @@
         })
       );
       
+      const setTheme = (theme_) => {
+        theme = theme_;
+        recalculate();
+        redraw();
+      }
+      
       const animateText = (duration) =>
         v.Animation(`${duration} infinite alternate ease-in-out`, {
           0: v.op`.4`.tsh`0 0 0 T`,
           100: v.op`1`.tc`t1`.tsh`0 0 8px t1`
         });
         
-      const url = 'https://github.com/frameorc/vendetta/blob/main/examples/preact.html';
       const Body = VendettaRoot(() => h('div', {},
         v.abs.i`0`.ov`a`.bg`c0`.tc`t0`.m`0`({ $cls: 'test', textSizeAdjust: '100%' }),
         h('div', {}, v.col().gap`8`.w`mn`.mh`a`.mv`6`.tf`sans-serif`,
           h('div', {}, v.col().gap`2`,
-            h('div', {}, v.tw`bold`.ts`md`.tws`p`,
-              'A simple ', h('span', {}, animateText`2s`, 'V'), 'endetta example',
-              h('a', { href: url, target: 'blank' },
-                v.flr.tc`t1`.td`n`,
-                v.Transition('.3s', v.op`.6`.brb`T`, v.Hover.op`1`.brb`t1`),
-                'View source')
+            h('div', {}, v.row().tw`bold`.ts`md`.tws`p`,
+              h('span', {}, animateText`2s`, 'V'),
+              h('span', {}, 'endetta example'),
+              h('div', {}, v.flex`1`),
+              'Theme: ',
+              h('span', { onclick: () => setTheme('light') },
+                v.ptr(),
+                theme == 'light' && v.tc`t1`,
+                'Light'
+              ),
+              '/',
+              h('span', { onclick: () => setTheme('dark') },
+                v.ptr(),
+                theme == 'dark' && v.tc`t1`,
+                'Dark'
+              ),
             ),
             h('div', {}, v.gap`4 2`.grid`4[12 6|24] 4[12|6]`,
               Array.from({length: 16}, (_, i) =>
                 h('div', {}, v.r.p`2`.ts`sm`.sel`n`,
-                  v.Transition('.25s', v.bg`c1`.ring`4px T`),
-                  v.Hover.Transition('.5s', v.ring`2px t1`),
+                  v.Transition('.25s', v.bg`c1`.ring`4px T 2px c0`),
+                  v.Hover.Transition('.5s', v.ring`2px t1 2px c0`),
                   i == 0 ? 'Hover' : i
                 )
               )
@@ -60,15 +85,18 @@
           ),
           h('div', {}, v.tw`bold`.ts`md`,
             'Generated CSS',
-            () => h('pre', {},
-              v.tw`normal`.ts`xs`.tc`black`.tws`pw`.bg`c1`.p.r`2`.sel`n`,
+            h('pre', {},
+              v.tw`normal`.ts`xs`.tc`t0`.tws`pw`.bg`c1`.p.r`2`.sel`n`,
               v.Transition('.5s', v.sh`sm`, v.Hover.sh`md`),
               [...stylesheet.rules].map(v => v.cssText).join('\n')
             )
           ),
         )
       ));
-      render(h(Body), document.body);
+      
+      const redraw = () => render(h(Body), document.body);
+      redraw();
+      setTimeout(redraw);
     </script>
   </body>
 </html>
