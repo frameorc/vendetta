@@ -75,8 +75,8 @@
             ),
             h('div', {}, v.gap`4 2`.grid`4[12 6|24] 4[12|6]`,
               Array.from({length: 16}, (_, i) =>
-                h('div', {}, v.r.p`2`.ts`sm`.sel`n`,
-                  v.Transition('.25s', v.bg`c1`.ring`4px T 2px c0`),
+                h('div', {}, v.r.p`2`.ts`sm`.sel`n`.bg`c1`,
+                  v.Transition('.25s', v.ring`4px T 2px c0`),
                   v.Hover.Transition('.5s', v.ring`2px t1 2px c0`),
                   i == 0 ? 'Hover' : i
                 )
