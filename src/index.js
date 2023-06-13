@@ -35,9 +35,9 @@ export const unwrap = v =>
   : v);
 
 const combine = (calls1, calls2) => {
-  const acc = {};
   if (!calls1.length) return calls2;
   if (!calls2.length) return calls1;
+  const acc = {};
   for (const c1 of calls1) for (const c2 of calls2) {
     const s = [c1.sel, c2.sel].filter(v => v).join('');
     const n = [c1.name, c2.name].filter(v => v).join('.');
@@ -121,7 +121,7 @@ const Property = (args, last) => (
     process: last.process.concat(
       last.props.map((key) => (methods) => () => ({
         style: methods[key](...(args ?? [])),
-        cls: key + '(' + (argsCount(methods[key]) > 0 ? args.join(' ') : '') + ')'
+        cls: key + '('+(argsCount(methods[key]) > 0 ? args.join(' ') : '')+')'
       }))
     )
   }]
@@ -191,7 +191,6 @@ const processCall = (call, methods) => {
 export const Adapter = (api) => (methods) => {
   const stylesheet = new CSSStyleSheet;
   document.adoptedStyleSheets.push(stylesheet);
-  const addRule = str => stylesheet.insertRule(str, stylesheet.cssRules.length);
 
   const updates = {};
   const process = (args, calls) => {
@@ -200,20 +199,21 @@ export const Adapter = (api) => (methods) => {
     const updatesList = calls.flatMap(call => processCall(call, methods));
     for (const update of updatesList) {
       const { cls, css, inlineStyle } = update();
-      if (!updates[cls] && css) {
-        updates[cls] = update;
-        css.forEach(addRule);
-      }
+      
       if (inlineStyle) api.addStyle(el, inlineStyle);
       else api.addClass(el, cls);
+      
+      if (updates[cls] || !css) continue;
+      updates[cls] = update;
+      for (const str of css)
+        stylesheet.insertRule(str, stylesheet.cssRules.length);
     }
     return true;
   }
   
-  const recalculate = () => {
-    stylesheet.replace('');
-    Object.values(updates).flatMap(f => f().css).forEach(addRule);
-  }
+  const recalculate = () => stylesheet.replaceSync(
+    Object.values(updates).flatMap(f => f().css).join('\n')
+  );
   
   const v = stack({ target: api.target, process }, []);
   return {v, stylesheet, recalculate};
