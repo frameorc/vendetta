@@ -32,48 +32,37 @@ const Node = (data) => ({
   media: '',
   important: false,
   inline: false,
-  data: data
+  classname: null,
+  style: null,
+  ...data
 });
-const nodeKey = node =>
-  node.selector + node.media + node.important + node.inline;
-const nodeCss = (node, item) => {
+const nodeCss = (node) => {
   const nodeSel = selectorTmpl(node.selector, '');
   const cls = escape([
     node.media && '𝕄(' + node.media + ')',
     nodeSel && '𝕊(' + nodeSel + ')',
-    item.classname
+    node.classname
   ].filter(v => v).join(''));
   const sel = selectorTmpl(node.selector, '.' + cls);
-  const str = sel + styleStr(item.style);
+  const str = sel + styleStr(node.style);
   return { cls, css: node.media ? `@media ${node.media} {${str}}` : str };
 }
 
-const StyleNode = (args) => Node([
+const StyleNode = (args) => Node(
   args.length == 1
   ? { classname: 'CSS(' + JSON.stringify(args[0]) + ')', style: args[0] }
   : { classname: args[0], style: args[1] }
-]);
+);
 const MethodNode = (methods, name, args) => {
   const style = () => methods[name](...args);
-  const item = {
+  return Node({
     classname: name + '(' + args.join(',') + ')',
     style: style(),
-    recalculate: () => (item.style = style())
-  }
-  return Node([item]);
+    recalculate() { this.style = style(); }
+  });
 }
 
 const toNodes = obj => Array.isArray(obj) ? obj : StyleNode([obj]);
-const reduceNodes = nodes => {
-  const res = {};
-  for (const node of nodes) {
-    const n = res[nodeKey(node)] ??= Node([]);
-    n.selector = node.selector;
-    n.media = node.media;
-    n.data.push(...node.data);
-  }
-  return Object.values(res);
-}
 
 const operators = {
   Sel: (selStr, ...args) => args.flatMap(toNodes).map(node => ({
@@ -94,7 +83,7 @@ const Stack = (wrapper, methods) => {
     );
   const stack = (nodes, props) => {
     const style = (...args) => wrapper([StyleNode(args)]);
-    const operator = (func) => (...args) => wrapper(reduceNodes(func(...args)));
+    const operator = (func) => (...args) => wrapper(func(...args));
     const method = (...args) => stack(
       nodes.concat(props.map(name => MethodNode(methods, name, args))),
       []
@@ -124,15 +113,13 @@ const Processor = ({ addStyle, addClass }) => {
   const process = (elem, nodes) => {
     console.log('\n\nprocess elem', { elem, nodes });
     for (const node of nodes) {
-      for (const item of node.data) {
-        const { cls, css } = nodeCss(node, item);
-        if (!processed[cls]) {
-          processed[cls] = { node, item };
-          stylesheet.insertRule(css, stylesheet.cssRules.length);
-        }
-        addClass(elem, cls);
-        console.log(css);
+      const { cls, css } = nodeCss(node);
+      if (!processed[cls]) {
+        processed[cls] = node;
+        stylesheet.insertRule(css, stylesheet.cssRules.length);
       }
+      addClass(elem, cls);
+      console.log(css);
     }
   }
   const recalculate = () => {
