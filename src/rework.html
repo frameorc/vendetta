@@ -30,8 +30,7 @@ const styleStr = (style, important) => `{${
 const Node = (data) => ({
   selector: '',
   media: '',
-  data: data,
-  css() { return nodeCss(this); }
+  data: data
 });
 const nodeKey = node => node.selector + node.media;
 const nodeCss = (node, item) => {
@@ -191,14 +190,15 @@ v.Animation('1s infinite', {
 })
 */
 console.log([
-  v({ color: 'red' }),
-  v.bg.tc`red`,
-  v.Media('screen', v.Sel(':hover', { color: 'red' }))
+  v('some-classname', { fontSize: '24px' }),
+  v.bg.tc`blue`,
+  v.Media('screen', v.Sel(':hover', { color: 'red' })),
 ])
 body(
-  v({ color: 'red' }),
-  v.bg.tc`red`,
-  v.Media('screen', v.Sel(':hover', { color: 'red' }))
+  v('some-classname', { fontSize: '24px' }),
+  v.bg.tc`blue`,
+  v.Media('screen', v.Sel(':hover', { color: 'red' })),
+  'Text'
 );
 body.refresh();
 </script>
