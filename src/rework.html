@@ -22,7 +22,7 @@ const selectorTmpl = (sel, val) =>
   : val + sel;
 const kebab = s => s.replaceAll(/[A-Z]/g, c => '-' + c.toLowerCase());
 const styleStr = (style, important) => `{${
-  Object.entries(style).map(([k, v]) => k == '$cls' ? '' :
+  Object.entries(style).map(([k, v]) =>
     kebab(k) + ': ' + v + (important ? ' !important' : '') + ';'
   ).join('')
 }}`;
@@ -37,10 +37,9 @@ const Node = (data) => ({
   ...data
 });
 const nodeCss = (node) => {
-  const nodeSel = selectorTmpl(node.selector, '');
   const cls = escape([
     node.media && '𝕄(' + node.media + ')',
-    nodeSel && '𝕊(' + nodeSel + ')',
+    node.selector && '𝕊(' + node.selector + ')',
     node.classname
   ].filter(v => v).join(''));
   const sel = selectorTmpl(node.selector, '.' + cls);
@@ -129,7 +128,7 @@ const Processor = ({ addStyle, addClass }) => {
   return { process, recalculate, stylesheet }
 }
 
-const Adapter = ({ target, element, addClass, addStyle }) => methods => {
+const Adapter = ({ target, addClass, addStyle }) => methods => {
   const { process, recalculate, stylesheet } = Processor({ addStyle, addClass });
   const wrapper = (nodes) => Object.assign(nodes,
     target((elem) => process(elem, nodes))
