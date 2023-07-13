@@ -12,7 +12,7 @@ import { methods } from '../../vendetta-themes/methods/default.js';
 
 const ID = ((v={}, i=0) => (s) => v[s] ??= i++)();
 const chars = Object.fromEntries(
-  [...`  (⦗)⦘:᛬.ꓸ,‚[❲]❳|⼁#＃<﹤>﹥{❴}❵"“'‘%％`.matchAll(/../g)]
+  [...`  (⦗)⦘:᛬.ꓸ,‚[❲]❳|⼁#＃<﹤>﹥{❴}❵"“'‘%％!ǃ`.matchAll(/../g)]
     .map(v => v[0].split(''))
 );
 const escape = str => CSS.escape(str.replaceAll(/./g, v => chars[v] ?? v));
@@ -40,10 +40,11 @@ const nodeCss = (node) => {
   const cls = escape([
     node.media && '𝕄(' + node.media + ')',
     node.selector && '𝕊(' + node.selector + ')',
-    node.classname
+    node.classname,
+    node.important && 'ǃ'
   ].filter(v => v).join(''));
   const sel = selectorTmpl(node.selector, '.' + cls);
-  const str = sel + styleStr(node.style);
+  const str = sel + styleStr(node.style, node.important);
   return { cls, css: node.media ? `@media ${node.media} {${str}}` : str };
 }
 
@@ -71,14 +72,22 @@ const operators = {
   Media: (queryStr, ...args) => args.flatMap(toNodes).map(node => ({
     ...node,
     media: node.media ? node.media + ' and ' + queryStr : queryStr
-  }))
+  })),
+  Important: (...args) => args.flatMap(toNodes).map(node => ({
+    ...node,
+    important: true
+  })),
+  Inline: (...args) => args.flatMap(toNodes).map(node => ({
+    ...node,
+    inline: true
+  })),
 }
 
 const Stack = (wrapper, methods) => {
   const methodNames = Object.keys(methods);
   for (const name of methodNames)
     if (name[0].toLowerCase() != name[0]) throw new Error(
-      `Method names should start with lowercase characters (method: ${name})`
+      `Method name should start with a lowercase character, got "${name}"`
     );
   const stack = (nodes, props) => {
     const style = (...args) => wrapper([StyleNode(args)]);
@@ -113,11 +122,15 @@ const Processor = ({ addStyle, addClass }) => {
     console.log('\n\nprocess elem', { elem, nodes });
     for (const node of nodes) {
       const { cls, css } = nodeCss(node);
-      if (!processed[cls]) {
-        processed[cls] = node;
-        stylesheet.insertRule(css, stylesheet.cssRules.length);
+      if (node.inline) {
+        addStyle(elem, node.style);
+      } else {
+        if (!processed[cls]) {
+          processed[cls] = node;
+          stylesheet.insertRule(css, stylesheet.cssRules.length);
+        }
+        addClass(elem, cls);
       }
-      addClass(elem, cls);
       console.log(css);
     }
   }
@@ -179,12 +192,14 @@ v.Animation('1s infinite', {
 */
 console.log([
   v('some-classname', { fontSize: '24px' }),
-  v.bg.tc`blue`,
+  v.Important(v.bg.tc`blue`),
+  v.Inline(v.p`2`),
   v.Media('screen', v.Sel(':hover', { color: 'red' })),
 ])
 body(
   v('some-classname', { fontSize: '24px' }),
-  v.bg.tc`blue`,
+  v.Important(v.bg.tc`blue`),
+  v.Inline(v.p`2`),
   v.Media('screen', v.Sel(':hover', { color: 'red' })),
   'Text'
 );
