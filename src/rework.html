@@ -5,18 +5,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://raw.githubusercontent.com/necolas/normalize.css/master/normalize.css" rel="stylesheet">
 </head>
 <script type="module" type="text/javascript">
-import { c, body, attr, builder, Element } from './frameorc-dom.js';
+import { c, body, on, builder, Element } from './frameorc-dom.js';
 import { methods } from '../../vendetta-themes/methods/default.js';
 
-const ID = ((v={}, i=0) => (s) => v[s] ??= i++)();
-const chars = Object.fromEntries(
-  [...`  (⦗)⦘:᛬.ꓸ,‚[❲]❳|⼁#＃<﹤>﹥{❴}❵"“'‘%％!ǃ`.matchAll(/../g)]
-    .map(v => v[0].split(''))
-);
+const ID = ((r={}, i={}) => (t, v) => r[t+v] ??= (i[t] = i[t] ? i[t]+1 : 0))();
+const chars = Object.fromEntries([...
+  `  (⦗)⦘:᛬.ꓸ,‚[❲]❳|⼁#＃<﹤>﹥{❴}❵"“'‘%％!ǃ`.matchAll(/../g)
+].map(v => v[0].split('')));
 const escape = str => CSS.escape(str.replaceAll(/./g, v => chars[v] ?? v));
-const selectorTmpl = (sel, val) =>
+const selectorTmpl = (sel='', val='') =>
   typeof sel == 'function' ? sel(val)
   : sel.includes('&') ? sel.replaceAll('&', val)
   : val + sel;
@@ -27,70 +27,117 @@ const styleStr = (style, important) => `{${
   ).join('')
 }}`;
 
-const Node = (data) => ({
-  selector: '',
-  media: '',
-  important: false,
-  inline: false,
-  classname: null,
-  style: null,
-  ...data
-});
-const nodeCss = (node) => {
-  const cls = escape([
-    node.media && '𝕄(' + node.media + ')',
-    node.selector && '𝕊(' + node.selector + ')',
-    node.classname,
-    node.important && 'ǃ'
-  ].filter(v => v).join(''));
-  const sel = selectorTmpl(node.selector, '.' + cls);
-  const str = sel + styleStr(node.style, node.important);
-  return { cls, css: node.media ? `@media ${node.media} {${str}}` : str };
+const unwrap = f => typeof f == 'function' ? unwrap(f()) : f;
+class Node {
+  constructor(data) {
+    this.updates = {};
+    for (const [k, v] of Object.entries({
+      selector: '',
+      media: '',
+      important: false,
+      inline: false,
+      classname: null,
+      rules: null,
+      style: null
+    })) {
+      const val = data[k] ?? v;
+      if (typeof val == 'function') {
+        this.updates[k] = val;
+        this[k] = unwrap(val);
+      } else if (val) {
+        this[k] = val;
+      }
+    }
+  }
+  recalculate() {
+    for (const [k, f] of Object.entries(this.updates)) this[k] = unwrap(f);
+  }
+  css() {
+    const cls = escape([
+      this.media && '𝕄(' + this.media + ')',
+      this.selector && '𝕊(' + this.selector + ')',
+      this.classname,
+      this.important && 'ǃ'
+    ].filter(v => v).join(''));
+    const sel = selectorTmpl(this.selector, '.' + cls);
+    const str = sel + styleStr(this.style, this.important);
+    const rules = [
+      ...(this.rules ?? []),
+      this.media ? `@media ${this.media} {${str}}` : str
+    ];
+    return { cls, rules };
+  }
 }
 
-const StyleNode = (args) => Node(
+const StyleNode = (...args) => new Node(
   args.length == 1
   ? { classname: 'CSS(' + JSON.stringify(args[0]) + ')', style: args[0] }
   : { classname: args[0], style: args[1] }
 );
-const MethodNode = (methods, name, args) => {
-  const style = () => methods[name](...args);
-  return Node({
-    classname: name + '(' + args.join(',') + ')',
-    style: style(),
-    recalculate() { this.style = style(); }
-  });
-}
+const MethodNode = (methods, name, args) => new Node({
+  classname: name + '(' + args.join(',') + ')',
+  style: () => methods[name](...args)
+});
 
-const toNodes = obj => Array.isArray(obj) ? obj : StyleNode([obj]);
+const toNodes = obj =>
+  Array.isArray(obj) ? obj.flatMap(toNodes)
+  : obj instanceof Node ? obj
+  : StyleNode(obj);
+const combinedStyle = nodes => nodes.reduce((obj, node) =>
+  Object.assign(obj, node.updates.style?.() ?? node.style ?? {})
+, {});
 
 const operators = {
-  Sel: (selStr, ...args) => args.flatMap(toNodes).map(node => ({
+  Sel: (selStr, ...args) => args.flatMap(toNodes).map(node => new Node({
     ...node,
     selector: selectorTmpl(selStr, node.selector)
   })),
-  Media: (queryStr, ...args) => args.flatMap(toNodes).map(node => ({
+  Media: (queryStr, ...args) => args.flatMap(toNodes).map(node => new Node({
     ...node,
     media: node.media ? node.media + ' and ' + queryStr : queryStr
   })),
-  Important: (...args) => args.flatMap(toNodes).map(node => ({
+  Important: (...args) => args.flatMap(toNodes).map(node => new Node({
     ...node,
     important: true
   })),
-  Inline: (...args) => args.flatMap(toNodes).map(node => ({
+  Inline: (...args) => args.flatMap(toNodes).map(node => new Node({
     ...node,
     inline: true
   })),
+  Transition: (param, ...args) => {
+    const nodes = args.flatMap(toNodes);
+    const keys = () => Object.keys(combinedStyle(nodes));
+    return nodes.concat(new Node({
+      classname: () => '𝕋(' + ID('transition', param + keys().join(',')) + ')',
+      style: () => ({ transition: keys().map(k => param + ' ' + k).join(',') })
+    }));
+  },
+  Animation: (param, keyframes) => {
+    const str = () =>
+      Object.entries(keyframes).map(([ident, nodes]) => {
+        const style = combinedStyle(nodes);
+        return ident + '% ' + styleStr(style, false);
+      }).join('\n');
+    const id = () => ID('animation', param + str());
+    return [new Node({
+      classname: () => '𝔸(' + id() + ')',
+      rules: () => [`@keyframes 𝔸${id()} {\n${str()}\n}`],
+      style: () => ({ animation: param + ' 𝔸' + id() })
+    })];
+  },
 }
 
 const Stack = (wrapper, methods) => {
   const methodNames = Object.keys(methods);
-  for (const name of methodNames)
-    if (name[0].toLowerCase() != name[0]) throw new Error(
-      `Method name should start with a lowercase character, got "${name}"`
-    );
+  for (const name of methodNames) {
+    if (typeof name == 'symbol' || name == 'lenght' || +name+'' == name)
+      throw new Error(`Not allowed method: "${name}"`);
+    if (name[0].toLowerCase() != name[0])
+      throw new Error('Method name should start with a lowercase character' +
+        `, got "${name}"`);
+  }
   const stack = (nodes, props) => {
-    const style = (...args) => wrapper([StyleNode(args)]);
+    const style = (...args) => wrapper([StyleNode(...args)]);
     const operator = (func) => (...args) => wrapper(func(...args));
     const method = (...args) => stack(
       nodes.concat(props.map(name => MethodNode(methods, name, args))),
@@ -121,21 +168,26 @@ const Processor = ({ addStyle, addClass }) => {
   const process = (elem, nodes) => {
     console.log('\n\nprocess elem', { elem, nodes });
     for (const node of nodes) {
-      const { cls, css } = nodeCss(node);
+      const { cls, rules } = node.css();
       if (node.inline) {
         addStyle(elem, node.style);
-      } else {
-        if (!processed[cls]) {
-          processed[cls] = node;
-          stylesheet.insertRule(css, stylesheet.cssRules.length);
+      } else if (!processed[cls]) {
+        processed[cls] = node
+        for (const rule of rules) {
+          stylesheet.insertRule(rule, stylesheet.cssRules.length),
+          console.log(rule);
+          addClass(elem, cls);
         }
-        addClass(elem, cls);
       }
-      console.log(css);
     }
   }
   const recalculate = () => {
-    
+    stylesheet.replaceSync('');
+    for (const node of Object.values(processed)) {
+      node.recalculate();
+      for (const rule of node.css().rules)
+        stylesheet.insertRule(rule, stylesheet.cssRules.length);
+    }
   }
   
   return { process, recalculate, stylesheet }
@@ -154,22 +206,32 @@ const V = Adapter({
   target: (process) => builder((...args) => {
     const elem = args[1] instanceof Element && args[1];
     if (elem) process(elem);
-    else throw new Error('');
-  }),
+  }, {}),
   addClass: (el, cls) => (el.data.classes ??= new Set()).add(cls),
   addStyle: (el, style) => Object.assign(el.data.style ??= {}, style)
 });
 
-const {v, stylesheet} = V(
+let theme = 0;
+const colors = [
+  {
+    T: 'transparent',
+    t0: '#222',
+    t1: '#2196f3',
+    c0: '#fff',
+    c1: '#eaeef0',
+  },
+  {
+    T: 'transparent',
+    t0: '#fff',
+    t1: '#a3d6ff',
+    c0: '#424242',
+    c1: '#4b5668',
+  }
+];
+const {v, stylesheet, recalculate} = V(
   methods({
     unit: [8, 'px'],
-    color: {
-      T: 'transparent',
-      t0: '#222',
-      t1: '#2196f3',
-      c0: '#fff',
-      c1: '#eaeef0',
-    },
+    color: key => colors[theme][key] ?? key,
     textSize: {
       sm: '12px',
       md: '16px',
@@ -190,18 +252,20 @@ v.Animation('1s infinite', {
   100: v.tc`blue`
 })
 */
-console.log([
-  v('some-classname', { fontSize: '24px' }),
-  v.Important(v.bg.tc`blue`),
-  v.Inline(v.p`2`),
-  v.Media('screen', v.Sel(':hover', { color: 'red' })),
-])
 body(
   v('some-classname', { fontSize: '24px' }),
-  v.Important(v.bg.tc`blue`),
+  v.Transition('1s linear', v.row('l', 'c').h`mn`.gap`1`.bg`c1`.tc`t0`),
   v.Inline(v.p`2`),
-  v.Media('screen', v.Sel(':hover', { color: 'red' })),
-  'Text'
+  v.Media('screen', v.Sel(':hover', v.tc`t1`)),
+  'Text',
+  c.Button('Switch', on.click(() => {
+    theme = (theme + 1) % 2;
+    recalculate();
+  })),
+  c.Div(v.w.h`4`, v.Animation('2s infinite alternate', {
+    0: v.bg`t0`,
+    100: v.bg`t1`
+  }))
 );
 body.refresh();
 </script>
