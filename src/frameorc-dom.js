@@ -4,10 +4,11 @@
 
 // BUILDER SYNTAX
 
-export const FRAMEORC_BUILDER = Symbol('FRAMEORC_BUILDER');
+const FRAMEORC_BUILDER = Symbol('FRAMEORC_BUILDER');
 const isBuilder = (obj) => Object.hasOwn(obj, FRAMEORC_BUILDER);
-export function builder(f) {
-  return { [FRAMEORC_BUILDER]: f };
+export function builder(f, target=f) {
+  target[FRAMEORC_BUILDER] = f
+  return target;
 }
 export function render(obj, ...args) {
   const construct = obj[FRAMEORC_BUILDER];
@@ -17,7 +18,9 @@ export function Builder(effect, tasks=[], names=[]) {
   return new Proxy(builder((...args) => (args[0] === FRAMEORC_BUILDER)
       ? effect([...tasks, { names, args: [] }], ...args.slice(1))
       : Builder(effect, [...tasks, { names, args }], [])), {
-    get: (_object, name, _proxy) => Builder(effect, tasks, [...names, name]),
+    get: (_object, name, _proxy) => typeof name == 'symbol'
+      ? _object[name]
+      : Builder(effect, tasks, [...names, name]),
   });
 }
 
