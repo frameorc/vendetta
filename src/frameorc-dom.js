@@ -29,7 +29,7 @@ export function Builder(effect, tasks=[], names=[]) {
 import { patch, VNode } from './snabb.js';
 export const Element = VNode;
 
-function append(child, el, ctx) {
+export function append(child, el, ctx) {
   if (child === undefined || child === null || child === false) {}
   else if (isBuilder(child)) { render(child, el, ctx); }
   else if (Array.isArray(child)) { child.forEach(c => append(c, el, ctx)); }

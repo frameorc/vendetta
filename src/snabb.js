@@ -153,6 +153,7 @@ function sameVnode(vnode1, vnode2) {
     const isSameTextOrFragment = !vnode1.sel && vnode1.sel === vnode2.sel
         ? typeof vnode1.text === typeof vnode2.text
         : true;
+    //console.log({isSameSel, isSameKey, isSameIs, isSameTextOrFragment}, {vnode1, vnode2})
     return isSameSel && isSameKey && isSameIs && isSameTextOrFragment;
 }
 /**
