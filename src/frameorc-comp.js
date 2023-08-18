@@ -52,6 +52,6 @@ const Component_ = (render, is) => {
 }
 
 const Component = (render) => Component_(render, render);
-Component.child = render => Component_(render, render.toString())();
+Component.inline = render => Component_(render, render.toString())();
 
 export { Component, Val };
