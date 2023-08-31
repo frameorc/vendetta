@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="module">
+  import { body, frag, hook, on, c } from 'https://cdn.jsdelivr.net/gh/frameorc/frameorc/src/dom.js';
+  body(frag(
+    hook
+      .pre((...a) => console.log('pre', ...a))
+      .init((...a) => console.log('init', ...a))
+      .create((...a) => console.log('create', ...a))
+      .insert((...a) => console.log('insert', ...a))
+      .prepatch((...a) => console.log('prepatch', ...a))
+      .update((...a) => console.log('update', ...a))
+      .postpatch((...a) => console.log('postpatch', ...a))
+      .destroy((...a) => console.log('destroy', ...a))
+      .remove((...a) => console.log('remove', ...a))
+      .post((...a) => console.log('post', ...a)),
+    c.Button(on.click(body.refresh), 'Refresh'),
+    () => (console.log("\n\n"), Math.random())
+  ));
+</script>
