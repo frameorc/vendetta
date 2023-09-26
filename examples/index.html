@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/reset-css@5.0.2/reset.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter&family=Roboto+Mono:ital@1&display=swap" rel="stylesheet">
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.1/codemirror.min.js'></script>
+<link rel="stylesheet" href='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.1/codemirror.min.css'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.1/mode/javascript/javascript.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.1/mode/xml/xml.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.61.1/mode/css/css.min.js'></script>
+
+<script type="module">
+  import { body, c, on, hook, attr } from 'https://cdn.jsdelivr.net/gh/frameorc/frameorc@69af49aba3bf2d5f373eb0b128a923e827483b36/src/dom.js';
+  import { Component, Val } from 'https://cdn.jsdelivr.net/gh/frameorc/frameorc@69af49aba3bf2d5f373eb0b128a923e827483b36/src/com.js';
+  
+  import V from '../adapters/frameorc.js';
+  import methods from '../methods/default.js';
+  import materialColors from '../palettes/material-abbr.js';
+  
+  const design = () => V(methods({
+    unit: [8, 'px'],
+    color: materialColors,
+    textSize: {
+      sm: '12px',
+      md: '16px',
+      lg: '24px'
+    },
+    shadow: {
+      card: '0 0 10px 0 rgba(0, 0, 0, .2)'
+    }
+  }));
+
+  let { v, stylesheet } = design();
+  const captureGeneratedCss = (func) => {
+    const d = design();
+    const [oldV, oldStylesheet] = [v, stylesheet];
+    [v, stylesheet] = [d.v, d.stylesheet];
+    const result = func();
+    const currentCss = () => [...d.stylesheet.cssRules].map(v => v.cssText).join('\n');
+    [v, stylesheet] = [oldV, oldStylesheet];
+    return [currentCss, result];
+  }
+  
+  
+  function format(html) {
+    var tab = '  ';
+    var result = '';
+    var indent = '';
+
+    html.split(/>\s*</).forEach(function(element) {
+        if (element.match(/^\/\w/)) indent = indent.substring(tab.length);
+
+        result += indent + '<' + element + '>\r\n';
+
+        if (element.match(/^<?\w[^>]*[^\/]$/) && !element.startsWith("input")) {
+            indent += tab;
+        }
+    });
+
+    return result.substring(1, result.length - 3);
+  }
+  
+  const Code = Component((mode, value) => {
+    const [editor, setEditor] = Val();
+    editor?.doc?.setValue?.(value);
+    return c.Div(
+      v.h('f').ov('a').tf`Roboto Mono`.w`f`.tl`1.35`.ts`sm`,
+      hook.insert(vnode => {
+        const mirror = CodeMirror(vnode.elm, {
+            value: value,
+            mode: mode,
+            lineNumbers: true,
+            lineWrapping: true,
+            tabSize: 2,
+            viewportMargin: Infinity
+        });
+        Object.assign(mirror.display.wrapper.style, {
+          minWidth: '360px',
+          height: 'auto',
+          overflow: 'hidden'
+        });
+        setEditor(mirror);
+      })
+    )
+  });
+  
+  const Example = Component((title, previewSrc, func) => {
+    const [html, setHtml] = Val('');
+    const [css, setCss] = Val('');
+    const [tab, setTab] = Val('Result');
+    const [currentCss, result] = captureGeneratedCss(func);
+    
+    const tabs = {
+      'Result': c.Div(v.row('c', 'c').w.h`f`,
+        hook.insert(vnode => {
+          setHtml(vnode.elm.innerHTML);
+          setCss(currentCss());
+        }),
+        result
+      ),
+      'Code': Code('javascript', String(func)
+        .split('\n')
+        .map(l => l.replace(/^\s{4}/, ''))
+        .join('\n')
+      ),
+      'Rendered HTML': Code('xml', format(html)),
+      'Generated CSS': Code('css', css),
+    }
+    
+    return c.Div(
+      v.col().tf`Inter`.gap`2`.w`1200px`.mh`a`.mt`4`.mnh`768px`.rel(),
+      c.Span(v.tw`bold`.ts`lg`, title),
+      c.Div(v.row('l', 'c').gap(2).mb(2),
+        Object.keys(tabs).map(cTab =>
+          c.Div(v.ptr().brb(cTab == tab ? 'b4' : 'gr4', '2px').h(2.5).sel`n`,
+            on.click(() => setTab(cTab)),
+            cTab
+          )
+        )
+      ),
+      Object.entries(tabs).map(([cTab, content]) => c.Div(
+        v.d(cTab == tab ? 'f' : 'n').br`gr4`.r`2`.ov`h`,
+        cTab == tab || cTab == 'Result' ? content : ''
+      ))
+    );
+  });
+  
+  body(Example('Complex animations', './img/complex-animations-1.png', () => {
+      // the V-letter shape
+      const shape = [[1.5, 4], [7, 20.25], [9, 20.25], [14.5, 4]];
+      const lines = Array.from({ length: shape.length - 1 }, (_, i) =>
+        [shape[i], shape[i + 1]]
+      );
+      
+      // place points along the shape
+      const points = lines.flatMap((line) => {
+        const [[x1, y1], [x2, y2]] = line;
+        const [dx, dy] = [x2 - x1, y2 - y1];
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const steps = Math.ceil(d / .2);
+        return Array.from({ length: steps + 1 }, (_, i) => [
+          x1 + dx * i / steps,
+          y1 + dy * i / steps,
+        ])
+      });
+      
+      return c.Div(
+        v.rel().row('c', 'c').pv`12`.w`f`,
+        c.Div(v.row('l', 'bl').rel(),
+          c.Span(v.ts(24).tc`b6`.z(1), 'V'),
+          c.Span(v.ts(20), 'endetta'),
+          points.map(([x, y]) => c.Div(
+            v.abs().r`50%`.bg`b3`.rigid(),
+            v.Inline(v.left(x).top(y).w.h(2.5), { filter: 'blur(4px)' }),
+            v.Animation([
+              (1 + Math.random() * 2).toFixed(1) + 's',
+              'ease-in-out',
+              'infinite'
+            ].join(' '), {
+              0: v.tsl('-50%', 0).op(0),
+              25: v.tsl('-50%', -1).op(1),
+              50: v.tsl('-50%', -2),
+              100: v.tsl('-50%', -7).op(0)
+            })
+          ))
+        )
+      )
+    }));
+</script>
